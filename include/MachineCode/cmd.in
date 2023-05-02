@@ -1,0 +1,117 @@
+#include "dslforcmd.in"
+
+//DEF_CMD(name, code, hasArgument, isProducentArgumrnt, executableCode)
+
+DEF_CMD(HLT, 0, 0, 0, {
+
+  })
+
+DEF_CMD(PUSH,  1, 1, 1, {
+
+  })
+
+DEF_CMD(ADD, 2, 0, 0, {
+
+  })
+
+DEF_CMD(SUB, 3, 0, 0, {
+
+  })
+
+DEF_CMD(MUL, 4, 0, 0, {
+
+  })
+
+DEF_CMD(DIV, 5, 0, 0, {
+
+  })
+
+DEF_CMD(OUT, 6, 0, 0, {
+
+  })
+
+DEF_CMD(DUMP, 7, 0, 0, {
+
+    })
+
+DEF_CMD(IN, 8, 0, 0, {
+
+  })
+
+DEF_CMD(COPY, 9, 0, 0, {
+
+  })
+
+DEF_CMD(SWAP, 10, 0, 0, {
+
+  })
+
+DEF_CMD(POP, 11, 1, 0, {
+
+  })
+
+DEF_CMD(JMP, 12, 1, 1, {
+
+  })
+
+DEF_JMP(JB , 13, < )
+
+DEF_JMP(JBE, 14, <=)
+
+DEF_JMP(JA , 15, > )
+
+DEF_JMP(JAE, 16, >=)
+
+DEF_JMP_EQUAL(JE , 17, 1)
+
+DEF_JMP_EQUAL(JNE, 18, 0)
+
+DEF_MATH(SIN , 19, 0, sin)
+
+DEF_MATH(COS , 20, 0, cos)
+
+DEF_MATH(SQRT, 22, 1, sqrt)
+
+DEF_CMD(SHOW, 23, 0, 0, {
+    showMemory(cpu);
+  })
+
+DEF_CMD(RET, 24, 0, 0, {
+
+  })
+
+DEF_CMD(CALL, 25, 1, 1, {
+
+  })
+
+DEF_CMD(LESS, 26, 0, 0, {
+
+  })
+
+DEF_CMD(GREATER, 27, 0, 0, {
+
+  })
+
+DEF_CMD(EQL, 28, 0, 0, {
+
+  })
+
+DEF_CMD(NEQL, 29, 0, 0, {
+
+  })
+
+DEF_CMD(AND, 30, 0, 0, {
+
+  })
+
+/*DEF_CMD(OR, 31, 0, 0, {
+
+     })*/
+
+DEF_CMD(TAN, 31, 0, 0, {
+
+  })
+
+DEF_CMD(POW, 21, 0, 0, {
+
+  })
