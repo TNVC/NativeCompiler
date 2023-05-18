@@ -1,11 +1,13 @@
-#include "MachineCode/AOT.h"
+#include "MachineCode/Native.h"
 
 #include <cstdio>
 #include <cassert>
 #include <elf.h>
 
-namespace db::aot
+namespace db::native
 {
+
+  #define WRITE_INT64(ADR, VALUE) *(int64_t *) (ADR) = (int64_t) (VALUE)
 
   const size_t PROGRAM_HEADERS_OFFSET = sizeof(Elf64_Ehdr);
   const size_t SECTION_HEADERS_OFFSET = 0;
@@ -34,7 +36,8 @@ namespace db::aot
         db::ENTRY0_ADDRESS +
         sizeof(Elf64_Ehdr) +
         sizeof(Elf64_Phdr)*PROGRAM_HEADERS_COUNT +
-        sizeof(Elf64_Shdr)*SECTION_HEADERS_COUNT;
+        sizeof(Elf64_Shdr)*SECTION_HEADERS_COUNT +
+        code->flashing.mainAddress;
 
     struct {
       Elf64_Ehdr elfHeader;
@@ -62,27 +65,29 @@ namespace db::aot
 
     Elf64_Off  offset  { 0x00 };
     Elf64_Addr address { ENTRY0_ADDRESS };
-    Elf64_Xword size { AREA_SIZE(code->area.text) + sizeof(elf) };
+    Elf64_Xword size { code->text.size + sizeof(elf) };
     Elf64_Xword align { 0x1000 };
     elf.programHeaders[_text] =
         { PT_LOAD, PF_R | PF_X, offset, address, address, size, size, align };
 
     offset += size;
     address += size + align;
-    size = AREA_SIZE(code->area.rodata);
+    size = code->rodata.size;
     elf.programHeaders[_rodata] =
         { PT_LOAD, PF_R       , offset, address, address, size, size, align };
+    WRITE_INT64(&code->text.data[code->flashing.rodata], address);
 
     offset += size;
     address += size + align;
-    size = AREA_SIZE(code->area.data);
+    size = code->data.size;
     elf.programHeaders[_data] =
         { PT_LOAD, PF_R | PF_W, offset, address, address, size, size, align };
+    WRITE_INT64(&code->text.data[code->flashing.  data], address);
 
     fwrite(&elf, sizeof(elf), 1, file);
-    fwrite(code->area.text  .begin, AREA_SIZE(code->area.text  ), 1, file);
-    fwrite(code->area.rodata.begin, AREA_SIZE(code->area.rodata), 1, file);
-    fwrite(code->area.data  .begin, AREA_SIZE(code->area.data  ), 1, file);
+    fwrite(code->text  .data, code->text  .size, 1, file);
+    fwrite(code->rodata.data, code->rodata.size, 1, file);
+    fwrite(code->data  .data, code->data  .size, 1, file);
 
     fclose(file);
   }

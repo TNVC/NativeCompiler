@@ -1,11 +1,21 @@
 #include "Module/Module.h"
 
+#include "Utils/ErrorMessage.h"
+
 #include <cstdio>
 #include <malloc.h>
 #include <cassert>
 
 namespace db
 {
+
+  const size_t BUFFER_SIZE = 24;
+  static size_t NameIndex = 0;
+  static void SetName(llvm::Value *value);
+
+  const size_t MAX_NAME_SIZE = 64;
+  static size_t BlockIndex = 0;
+  char *GenerateName(const char *name);
 
   const llvm::Align DEFAULT_ALIGN(0x8);
 
@@ -71,7 +81,7 @@ namespace db
     (Module *theModule, llvm::Value *value, std::vector<llvm::BasicBlock *> *blocks);
   llvm::Value *CreateWhileStatement
     (Module *theModule, llvm::Value *value, std::vector<llvm::BasicBlock *> *blocks);
-  /*End:   IR building function*/
+  /*End: IR building function*/
 
   struct Status {
     bool inFunction;
@@ -91,13 +101,8 @@ namespace db
       Module *theModule =
           (Module *) calloc(1, sizeof(Module));
       if (!theModule)
-        {
-          fprintf(stderr,
-                  "Out of memory. File: \"%s\", Line: %d.\n",
-                  __FILE__, __LINE__);
+        OUT_OF_MEMORY(return nullptr);
 
-          return nullptr;
-        }
       CreateModule(theModule, "AST");
 
       CreateLibrary(theModule);
@@ -106,6 +111,7 @@ namespace db
 
       Status status { .endl = endl };
       VisitASTNode(theModule, &status, ast->root);
+
 
       return theModule;
     }
@@ -154,8 +160,7 @@ namespace db
      case Number:
        {
          double number = node->value.number;
-         llvm::Value
-         *value =
+         llvm::Value *value =
              llvm::ConstantFP::get(*theModule->context, llvm::APFloat(number));
          return value;
        }
@@ -184,7 +189,7 @@ namespace db
             theModule->builder->GetInsertBlock();
 
         llvm::BasicBlock * thenBlock =
-            CreateBasicBlock(theModule, status->function, "then");
+            CreateBasicBlock(theModule, status->function, GenerateName("then"));
         theModule->builder->SetInsertPoint(thenBlock);
         VisitASTNode(theModule, status, hasElse ? node->right->left : node->right);
         llvm::BasicBlock * firstBlock =
@@ -194,14 +199,14 @@ namespace db
         llvm::BasicBlock *secondBlock = nullptr;
         if (hasElse)
           {
-            elseBlock = CreateBasicBlock(theModule, status->function, "else");
+            elseBlock = CreateBasicBlock(theModule, status->function, GenerateName("else"));
             theModule->builder->SetInsertPoint(elseBlock);
             VisitASTNode(theModule, status, node->right->right);
             secondBlock =
                 theModule->builder->GetInsertBlock();
           }
         llvm::BasicBlock *mergeBlock =
-            CreateBasicBlock(theModule, status->function, "merge");;
+            CreateBasicBlock(theModule, status->function, GenerateName("merge"));
         theModule->builder->SetInsertPoint(mergeBlock);
 
         std::vector<llvm::BasicBlock *> blocks
@@ -241,13 +246,13 @@ namespace db
              theModule->builder->GetInsertBlock();
 
          llvm::BasicBlock *startBlock =
-             CreateBasicBlock(theModule, status->function, "start");
+             CreateBasicBlock(theModule, status->function, GenerateName("start"));
          theModule->builder->SetInsertPoint(startBlock);
          VisitASTNode(theModule, status, node->right);
          llvm::Value *cond =
             (llvm::Value *) VisitASTNode(theModule, status, node->left);
          llvm::BasicBlock *  endBlock =
-             CreateBasicBlock(theModule, status->function, "end");
+             CreateBasicBlock(theModule, status->function, GenerateName("end"));
 
          std::vector<llvm::BasicBlock *> blocks =
              { currentBlock, startBlock, endBlock };
@@ -255,59 +260,61 @@ namespace db
          return nullptr;
        }
      case Func:
-       {
+      {
+        NameIndex  = 0;
+        BlockIndex = 0;
         status->inFunction = true;
 
-         const char *name = node->left->value.name;
-         status->functionSym =
-             AddFunction(&theModule->symTable, name);
+        const char *name = node->left->value.name;
+        status->functionSym =
+            AddFunction(&theModule->symTable, name);
 
-         std::vector<const char *> paramsNames{};
+        std::vector<const char *> paramsNames{};
 
-         ASTNode *param = node->left->left;
-         for ( ; param; param = param->right)
-           {
-             const char *paramName =
-                 param->left->left->value.name;
-             paramsNames.push_back(paramName);
-           }
+        ASTNode *param = node->left->left;
+        for ( ; param; param = param->right)
+          {
+            const char *paramName =
+                param->left->left->value.name;
+            paramsNames.push_back(paramName);
+          }
 
-         llvm::Type *type =
-             llvm::Type::getDoubleTy(*theModule->context);
-         llvm::Type *retType =
-             node->left->right->value.statement == Void ?
-             llvm::Type::getVoidTy(*theModule->context) : type;
-         std::vector<llvm::Type *> params(paramsNames.size(), type);
+        llvm::Type *type =
+            llvm::Type::getDoubleTy(*theModule->context);
+        llvm::Type *retType =
+            node->left->right->value.statement == Void ?
+            llvm::Type::getVoidTy(*theModule->context) : type;
+        std::vector<llvm::Type *> params(paramsNames.size(), type);
 
-         llvm::FunctionType *functionType =
-             llvm::FunctionType::get(retType, params, false);
+        llvm::FunctionType *functionType =
+            llvm::FunctionType::get(retType, params, false);
 
-         llvm::Function *function =
-             CreateFunction(theModule, functionType, name, paramsNames);
+        llvm::Function *function =
+            CreateFunction(theModule, functionType, name, paramsNames);
 
-         llvm::BasicBlock *entry =
-             CreateBasicBlock(theModule, function, "entry");
-         theModule->builder->SetInsertPoint(entry);
+        llvm::BasicBlock *entry =
+            CreateBasicBlock(theModule, function, GenerateName("entry"));
+        theModule->builder->SetInsertPoint(entry);
 
-         param = node->left->left;
-         for (size_t i = 0; param; param = param->right, ++i)
-           {
-             const char *paramName =
-                 param->left->left->value.name;
-             llvm::Value *value =
-                 function->getArg(i);
-             AddParam(status->functionSym, paramName, value);
-           }
+        param = node->left->left;
+        for (size_t i = 0; param; param = param->right, ++i)
+          {
+            const char *paramName =
+                param->left->left->value.name;
+            llvm::Value *value =
+                function->getArg(i);
+            AddParam(status->functionSym, paramName, value);
+          }
 
-         status->function = function;
-         VisitASTNode(theModule, status, node->right);
-         status->inFunction = false;
+        status->function = function;
+        VisitASTNode(theModule, status, node->right);
+        status->inFunction = false;
 
-         if (retType->isVoidTy())
-           CreateReturn(theModule, function, nullptr);
+        if (retType->isVoidTy())
+          CreateReturn(theModule, function, nullptr);
 
-         return nullptr;
-       }
+        return nullptr;
+      }
      case Ret:
        {
          if (!status->inFunction) return nullptr;
@@ -501,7 +508,7 @@ namespace db
        llvm::ArrayRef<llvm::Value *> llvmParams(params);
        CreateScanfCall(theModule, &llvmParams);
        return nullptr;
-     }//TODO
+     }
      case Endl: return status->endl;
      case IsEE:
        {
@@ -559,7 +566,7 @@ namespace db
 
          return result;
        }
-     case Mod:
+     case Mod: return nullptr;
        {
          if (!status->inFunction) return nullptr;
 
@@ -599,6 +606,8 @@ namespace db
 
          return result;
        }
+     case Param:
+       return VisitASTNode(theModule, status, node->left);
      default: break;
    }
 
@@ -625,13 +634,21 @@ namespace db
        llvm::FunctionType::get(type, { type, type }, false);
    CreateFunction(theModule, functionType, "pow", { "base", "power" });
 
-   type = theModule->builder->getInt32Ty();
-   llvm::PointerType *ptrType =
-       llvm::IntegerType::getInt8PtrTy(*theModule->context);
+   type = theModule->builder->getDoubleTy();
+   llvm::Type *voidType =
+       theModule->builder->getVoidTy();
    functionType =
-       llvm::FunctionType::get(type, { ptrType }, true);
-   CreateFunction(theModule, functionType, "printf", { "format" });
-   CreateFunction(theModule, functionType, "scanf" , { "format" });
+       llvm::FunctionType::get(voidType, { type }, false);
+   CreateFunction(theModule, functionType, "printDouble" , { "name" });
+
+   functionType =
+       llvm::FunctionType::get(type, false);
+   CreateFunction(theModule, functionType,  "scanDouble" , {});
+
+   type = theModule->builder->getInt8PtrTy();
+   functionType =
+        llvm::FunctionType::get(voidType, { type }, false);
+   CreateFunction(theModule, functionType, "printString" , { "name" });
  }
 
   llvm::Function *CreateFunction
@@ -687,11 +704,19 @@ namespace db
           llvm::Type::getDoubleTy(*theModule->context);
 
       if (initValue)
-        return //llvm::LoadInst *
-          theModule->builder->CreateLoad(type, initValue, name);
+        {
+          llvm::Value *value =
+              theModule->builder->CreateLoad(type, initValue, name);
+          SetName(value);
+          return value;
+        }
       else
-        return //llvm::AllocaInst *
-          theModule->builder->CreateAlloca(type, nullptr, name);
+        {
+          llvm::Value *value =
+              theModule->builder->CreateAlloca(type, nullptr, name);
+          SetName(value);
+          return value;
+        }
     }
 
   llvm::Constant *CreateString
@@ -706,7 +731,6 @@ namespace db
 
       llvm::Constant *constant =
           theModule->builder->CreateGlobalStringPtr(llvm::StringRef(string), name, 0, theModule->theModule);
-
       return constant;
     }
 
@@ -717,7 +741,6 @@ namespace db
 
       llvm::ReturnInst *returnInst =
           theModule->builder->CreateRet(retValue);
-
       return returnInst;
     }
 
@@ -726,7 +749,10 @@ namespace db
     {
       assert(theModule && first && second);
 
-      return theModule->builder->CreateFAdd(first, second);
+      llvm::Value *value =
+          theModule->builder->CreateFAdd(first, second);
+      SetName(value);
+      return value;
     }
 
   llvm::Value *CreateSub
@@ -734,24 +760,33 @@ namespace db
     {
       assert(theModule && first && second);
 
-      return theModule->builder->CreateFSub(first, second);
+      llvm::Value *value =
+          theModule->builder->CreateFSub(first, second);
+      SetName(value);
+      return  value;
     }
 
   llvm::Value *CreateMul
       (Module *theModule, llvm::Value *first, llvm::Value *second)
-      {
-        assert(theModule && first && second);
+    {
+      assert(theModule && first && second);
 
-        return theModule->builder->CreateFMul(first, second);
-      }
+      llvm::Value *value =
+          theModule->builder->CreateFMul(first, second);
+      SetName(value);
+      return value;
+    }
 
   llvm::Value *CreateDiv
       (Module *theModule, llvm::Value *first, llvm::Value *second)
-      {
-        assert(theModule && first && second);
+    {
+      assert(theModule && first && second);
 
-        return theModule->builder->CreateFDiv(first, second);
-      }
+      llvm::Value *value =
+          theModule->builder->CreateFDiv(first, second);
+      SetName(value);
+      return value;
+    }
 
   llvm::Value *CreateCmp
     (Module *theModule, llvm::Value *first, llvm::Value *second, CmpType type)
@@ -767,8 +802,10 @@ namespace db
         case GT: { predicate = llvm::CmpInst::FCMP_OGT; break; }
       }
 
-      return
+      llvm::Value *value =
           theModule->builder->CreateFCmp(predicate, first, second);
+      SetName(value);
+      return value;
     }
 
   llvm::Value *CreateLogic
@@ -779,11 +816,19 @@ namespace db
       switch (type)
       {
         case LAnd:
-          return
-              theModule->builder->CreateLogicalAnd(first, second);
+          {
+            llvm::Value *value =
+                theModule->builder->CreateLogicalAnd(first, second);
+            SetName(value);
+            return value;
+          }
         case LOr:
-          return
-              theModule->builder->CreateLogicalOr (first, second);
+          {
+            llvm::Value *value =
+                theModule->builder->CreateLogicalOr (first, second);
+            SetName(value);
+            return value;
+          }
       }
     }
 
@@ -797,10 +842,13 @@ namespace db
       llvm::Type * fpType =
           theModule->builder->getDoubleTy();
 
-      llvm::Value *temp =
+      llvm::Value *temp0 =
           theModule->builder->CreateFPToSI(value, intType);
-      return
-          theModule->builder->CreateSIToFP(temp ,  fpType);
+      SetName(temp0);
+      llvm::Value *temp1 =
+          theModule->builder->CreateSIToFP(temp0,  fpType);
+      SetName(temp1);
+      return temp1;
     }
 
   llvm::Value *CreateLibraryCall
@@ -820,8 +868,10 @@ namespace db
       llvm::Function *function =
           theModule->theModule->getFunction(name);
 
-      return
-        theModule->builder->CreateCall(function, { value });
+      llvm::Value *temp =
+          theModule->builder->CreateCall(function, { value });
+      SetName(temp);
+      return temp;
     }
 
   llvm::Value *CreatePowCall
@@ -832,7 +882,10 @@ namespace db
       llvm::Function *function =
           theModule->theModule->getFunction("pow");
 
-      return theModule->builder->CreateCall(function, { base, power });
+      llvm::Value *value =
+          theModule->builder->CreateCall(function, { base, power });
+      SetName(value);
+      return value;
     }
 
   llvm::Value *CreatePrintfCall
@@ -840,10 +893,18 @@ namespace db
     {
       assert(theModule && values);
 
-      llvm::Function *function =
-          theModule->theModule->getFunction("printf");
+      llvm::Function *printString =
+          theModule->theModule->getFunction("printString");
+      llvm::Function *printDouble =
+          theModule->theModule->getFunction("printDouble");
 
-      return theModule->builder->CreateCall(function, *values);
+      size_t size = values->size();
+      for (size_t i = 0; i < size; ++i)
+        if (values->data()[i]->getType()->isDoubleTy())
+          theModule->builder->CreateCall(printDouble, values->data()[i]);
+        else
+          theModule->builder->CreateCall(printString, values->data()[i]);
+      return nullptr;
     }
 
   llvm::Value *CreateScanfCall
@@ -852,9 +913,19 @@ namespace db
       assert(theModule && values);
 
       llvm::Function *function =
-          theModule->theModule->getFunction("scanf");
+          theModule->theModule->getFunction("scanDouble");
 
-      return theModule->builder->CreateCall(function, *values);
+      llvm::Type *type = theModule->builder->getDoubleTy();
+      size_t size = values->size();
+      for (size_t i = 0; i < size; ++i)
+        {
+          llvm::Value *value =
+              theModule->builder->CreateCall(function);
+          SetName(value);
+          theModule->builder->CreateStore(values->data()[i], value);
+        }
+
+      return nullptr;
     }
 
   llvm::Value *CreateCall
@@ -865,7 +936,10 @@ namespace db
       llvm::Function *function =
           theModule->theModule->getFunction(name);
 
-      return theModule->builder->CreateCall(function, *values);
+      llvm::Value *value =
+          theModule->builder->CreateCall(function, *values);
+      SetName(value);
+      return value;
     }
 
   llvm::Value *CreateAssignment
@@ -873,9 +947,8 @@ namespace db
     {
       assert(theModule && first && second);
 
-      return
-        theModule->builder->CreateStore(first, second);
-    }//TODO
+      return theModule->builder->CreateStore(first, second);
+    }
 
   llvm::Value *CreateIfStatement
     (Module *theModule, llvm::Value *value, std::vector<llvm::BasicBlock *> *blocks)
@@ -908,7 +981,13 @@ namespace db
     {
       assert(theModule && value);
 
-      return theModule->builder->CreateFNeg(value);
+      llvm::Value *zero =
+          llvm::ConstantFP::get(*theModule->context, llvm::APFloat(.0));
+
+      llvm::Value *temp =
+          theModule->builder->CreateFSub(zero, value);
+      SetName(temp);
+      return temp;
     }
 
   llvm::Value *CreateWhileStatement
@@ -926,4 +1005,19 @@ namespace db
       return nullptr;
     }
 
+    static void SetName(llvm::Value *value)
+      {
+        assert(value);
+        char buffer[BUFFER_SIZE] = "";
+        sprintf(buffer, "%zu", NameIndex++);
+        value->setName(buffer);
+      }
+
+    char *GenerateName(const char *name)
+      {
+        assert(name);
+        static char buffer[MAX_NAME_SIZE]{};
+        sprintf(buffer, "%s%zu", name, BlockIndex++);
+        return buffer;
+      }
 }

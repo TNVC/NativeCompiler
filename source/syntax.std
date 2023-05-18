@@ -1,166 +1,73 @@
   {  ST 
-    {  FUNC 
-      {  "Factorial" 
-        {  PARAM 
-          {  VAR 
-            {  "n"   }   
-            { NIL } 
-          }   
-          { NIL } 
-        }   
-        {  TYPE 
-          { NIL } 
-          { NIL } 
-        }   
+    {  VAR 
+      {  "Ten"   }   
+      {  10   }   
+    }   
+    {  ST 
+      {  VAR 
+        {  "Pi"   }   
+        {  3.14   }   
       }   
       {  ST 
-        {  IF 
-          {  IS_BT 
-            {  "n"   }   
-            {  2   }   
-          }   
-          {  RET 
-            {  1   }   
-            { NIL } 
-          }   
-        }   
-        {  ST 
-          {  VAR 
-            {  "res"   }   
-            {  1   }   
-          }   
-          {  ST 
-            {  WHILE 
-              {  IS_NE 
+        {  FUNC 
+          {  "Factorial" 
+            {  PARAM 
+              {  VAR 
                 {  "n"   }   
-                {  0   }   
-              }   
-              {  ST 
-                {  EQ 
-                  {  "res"   }   
-                  {  MUL 
-                    {  "res"   }   
-                    {  "n"   }   
-                  }   
-                }   
-                {  ST 
-                  {  EQ 
-                    {  "n"   }   
-                    {  SUB 
-                      {  "n"   }   
-                      {  1   }   
-                    }   
-                  }   
-                  { NIL } 
-                }   
-              }   
-            }   
-            {  ST 
-              {  RET 
-                {  "res"   }   
                 { NIL } 
               }   
               { NIL } 
             }   
-          }   
-        }   
-      }   
-    }   
-    {  ST 
-      {  FUNC 
-        {  "Fibonaci" 
-          {  PARAM 
-            {  VAR 
-              {  "n"   }   
-              { NIL } 
-            }   
-            { NIL } 
-          }   
-          {  TYPE 
-            { NIL } 
-            { NIL } 
-          }   
-        }   
-        {  ST 
-          {  IF 
-            {  IS_BT 
-              {  "n"   }   
-              {  2   }   
-            }   
-            {  RET 
-              {  1   }   
-              { NIL } 
-            }   
-          }   
-          {  ST 
-            {  RET 
-              {  ADD 
-                {  CALL 
-                  {  "Fibonaci" 
-                    {  PARAM 
-                      {  SUB 
-                        {  "n"   }   
-                        {  1   }   
-                      }   
-                      { NIL } 
-                    }   
-                    { NIL } 
-                  }   
-                  { NIL } 
-                }   
-                {  CALL 
-                  {  "Fibonaci" 
-                    {  PARAM 
-                      {  SUB 
-                        {  "n"   }   
-                        {  2   }   
-                      }   
-                      { NIL } 
-                    }   
-                    { NIL } 
-                  }   
-                  { NIL } 
-                }   
-              }   
-              { NIL } 
-            }   
-            { NIL } 
-          }   
-        }   
-      }   
-      {  ST 
-        {  FUNC 
-          {  "readCoeff" 
-            { NIL } 
             {  TYPE 
               { NIL } 
               { NIL } 
             }   
           }   
           {  ST 
-            {  OUT 
-              {  PARAM 
-                $db::str  {  'Please, input coeff: '   } $ 
+            {  IF 
+              {  IS_BT 
+                {  "n"   }   
+                {  2   }   
+              }   
+              {  RET 
+                {  1   }   
                 { NIL } 
               }   
-              { NIL } 
             }   
             {  ST 
               {  VAR 
-                {  "coeff"   }   
-                {  0   }   
+                {  "res"   }   
+                {  1   }   
               }   
               {  ST 
-                {  IN 
-                  {  PARAM 
-                    {  "coeff"   }   
-                    { NIL } 
+                {  WHILE 
+                  {  IS_NE 
+                    {  "n"   }   
+                    {  0   }   
                   }   
-                  { NIL } 
+                  {  ST 
+                    {  EQ 
+                      {  "res"   }   
+                      {  MUL 
+                        {  "res"   }   
+                        {  "n"   }   
+                      }   
+                    }   
+                    {  ST 
+                      {  EQ 
+                        {  "n"   }   
+                        {  SUB 
+                          {  "n"   }   
+                          {  1   }   
+                        }   
+                      }   
+                      { NIL } 
+                    }   
+                  }   
                 }   
                 {  ST 
                   {  RET 
-                    {  "coeff"   }   
+                    {  "res"   }   
                     { NIL } 
                   }   
                   { NIL } 
@@ -171,116 +78,71 @@
         }   
         {  ST 
           {  FUNC 
-            {  "evalLine" 
+            {  "Fibonaci" 
               {  PARAM 
                 {  VAR 
-                  {  "k"   }   
+                  {  "n"   }   
                   { NIL } 
                 }   
-                {  PARAM 
-                  {  VAR 
-                    {  "b"   }   
-                    { NIL } 
-                  }   
-                  { NIL } 
-                }   
+                { NIL } 
               }   
-              {  VOID 
+              {  TYPE 
                 { NIL } 
                 { NIL } 
               }   
             }   
             {  ST 
               {  IF 
-                {  IS_EE 
-                  {  "k"   }   
-                  {  0   }   
+                {  IS_BT 
+                  {  "n"   }   
+                  {  2   }   
                 }   
-                {  ELSE 
-                  {  IF 
-                    {  IS_EE 
-                      {  "b"   }   
-                      {  0   }   
-                    }   
-                    {  ELSE 
-                      {  OUT 
-                        {  PARAM 
-                          $db::str  {  'Infinite roots!'   } $ 
-                          {  PARAM 
-                            $db::str  {  ENDL 
-                              { NIL } 
-                              { NIL } 
-                            } $ 
-                            { NIL } 
-                          }   
-                        }   
-                        { NIL } 
-                      }   
-                      {  OUT 
-                        {  PARAM 
-                          $db::str  {  'No roots!'   } $ 
-                          {  PARAM 
-                            $db::str  {  ENDL 
-                              { NIL } 
-                              { NIL } 
-                            } $ 
-                            { NIL } 
-                          }   
-                        }   
-                        { NIL } 
-                      }   
-                    }   
-                  }   
-                  {  OUT 
-                    {  PARAM 
-                      $db::str  {  'One root: '   } $ 
-                      {  PARAM 
-                        {  DIV 
-                          {  SUB 
-                            {  "b"   }   
-                            { NIL } 
-                          }   
-                          {  "k"   }   
-                        }   
-                        {  PARAM 
-                          $db::str  {  ENDL 
-                            { NIL } 
-                            { NIL } 
-                          } $ 
-                          { NIL } 
-                        }   
-                      }   
-                    }   
-                    { NIL } 
-                  }   
+                {  RET 
+                  {  1   }   
+                  { NIL } 
                 }   
               }   
-              { NIL } 
+              {  ST 
+                {  RET 
+                  {  ADD 
+                    {  CALL 
+                      {  "Fibonaci" 
+                        {  PARAM 
+                          {  SUB 
+                            {  "n"   }   
+                            {  1   }   
+                          }   
+                          { NIL } 
+                        }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                    {  CALL 
+                      {  "Fibonaci" 
+                        {  PARAM 
+                          {  SUB 
+                            {  "n"   }   
+                            {  2   }   
+                          }   
+                          { NIL } 
+                        }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                  }   
+                  { NIL } 
+                }   
+                { NIL } 
+              }   
             }   
           }   
           {  ST 
             {  FUNC 
-              {  "print" 
-                {  PARAM 
-                  {  VAR 
-                    {  "a"   }   
-                    { NIL } 
-                  }   
-                  {  PARAM 
-                    {  VAR 
-                      {  "b"   }   
-                      { NIL } 
-                    }   
-                    {  PARAM 
-                      {  VAR 
-                        {  "c"   }   
-                        { NIL } 
-                      }   
-                      { NIL } 
-                    }   
-                  }   
-                }   
-                {  VOID 
+              {  "readCoeff" 
+                { NIL } 
+                {  TYPE 
                   { NIL } 
                   { NIL } 
                 }   
@@ -288,17 +150,72 @@
               {  ST 
                 {  OUT 
                   {  PARAM 
-                    {  "a"   }   
-                    {  PARAM 
-                      $db::str  {  '*x^2 + '   } $ 
+                    $db::str  {  'Please, input coeff: '   } $ 
+                    { NIL } 
+                  }   
+                  { NIL } 
+                }   
+                {  ST 
+                  {  VAR 
+                    {  "coeff"   }   
+                    {  0   }   
+                  }   
+                  {  ST 
+                    {  IN 
                       {  PARAM 
+                        {  "coeff"   }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                    {  ST 
+                      {  RET 
+                        {  "coeff"   }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                  }   
+                }   
+              }   
+            }   
+            {  ST 
+              {  FUNC 
+                {  "evalLine" 
+                  {  PARAM 
+                    {  VAR 
+                      {  "k"   }   
+                      { NIL } 
+                    }   
+                    {  PARAM 
+                      {  VAR 
                         {  "b"   }   
-                        {  PARAM 
-                          $db::str  {  '*x + '   } $ 
-                          {  PARAM 
-                            {  "c"   }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                  }   
+                  {  VOID 
+                    { NIL } 
+                    { NIL } 
+                  }   
+                }   
+                {  ST 
+                  {  IF 
+                    {  IS_EE 
+                      {  "k"   }   
+                      {  0   }   
+                    }   
+                    {  ELSE 
+                      {  IF 
+                        {  IS_EE 
+                          {  "b"   }   
+                          {  0   }   
+                        }   
+                        {  ELSE 
+                          {  OUT 
                             {  PARAM 
-                              $db::str  {  ' has'   } $ 
+                              $db::str  {  'Infinite roots!'   } $ 
                               {  PARAM 
                                 $db::str  {  ENDL 
                                   { NIL } 
@@ -307,116 +224,188 @@
                                 { NIL } 
                               }   
                             }   
+                            { NIL } 
+                          }   
+                          {  OUT 
+                            {  PARAM 
+                              $db::str  {  'No roots!'   } $ 
+                              {  PARAM 
+                                $db::str  {  ENDL 
+                                  { NIL } 
+                                  { NIL } 
+                                } $ 
+                                { NIL } 
+                              }   
+                            }   
+                            { NIL } 
                           }   
                         }   
                       }   
-                    }   
-                  }   
-                  { NIL } 
-                }   
-                { NIL } 
-              }   
-            }   
-            {  ST 
-              {  FUNC 
-                {  "$static_0" 
-                  { NIL } 
-                  {  VOID 
-                    { NIL } 
-                    { NIL } 
-                  }   
-                }   
-                {  ST 
-                  {  OUT 
-                    {  PARAM 
-                      $db::str  {  'Goodbye from last static block'   } $ 
-                      {  PARAM 
-                        $db::str  {  ENDL 
-                          { NIL } 
-                          { NIL } 
-                        } $ 
+                      {  OUT 
+                        {  PARAM 
+                          $db::str  {  'One root: '   } $ 
+                          {  PARAM 
+                            {  DIV 
+                              {  SUB 
+                                {  "b"   }   
+                                { NIL } 
+                              }   
+                              {  "k"   }   
+                            }   
+                            {  PARAM 
+                              $db::str  {  ENDL 
+                                { NIL } 
+                                { NIL } 
+                              } $ 
+                              { NIL } 
+                            }   
+                          }   
+                        }   
                         { NIL } 
                       }   
                     }   
-                    { NIL } 
                   }   
                   { NIL } 
                 }   
               }   
               {  ST 
                 {  FUNC 
-                  {  "main" 
-                    { NIL } 
+                  {  "print" 
+                    {  PARAM 
+                      {  VAR 
+                        {  "a"   }   
+                        { NIL } 
+                      }   
+                      {  PARAM 
+                        {  VAR 
+                          {  "b"   }   
+                          { NIL } 
+                        }   
+                        {  PARAM 
+                          {  VAR 
+                            {  "c"   }   
+                            { NIL } 
+                          }   
+                          { NIL } 
+                        }   
+                      }   
+                    }   
                     {  VOID 
                       { NIL } 
                       { NIL } 
                     }   
                   }   
                   {  ST 
-                    {  VAR 
-                      {  "a"   }   
-                      {  0   }   
+                    {  OUT 
+                      {  PARAM 
+                        {  "a"   }   
+                        {  PARAM 
+                          $db::str  {  '*x^2 + '   } $ 
+                          {  PARAM 
+                            {  "b"   }   
+                            {  PARAM 
+                              $db::str  {  '*x + '   } $ 
+                              {  PARAM 
+                                {  "c"   }   
+                                {  PARAM 
+                                  $db::str  {  ' has'   } $ 
+                                  {  PARAM 
+                                    $db::str  {  ENDL 
+                                      { NIL } 
+                                      { NIL } 
+                                    } $ 
+                                    { NIL } 
+                                  }   
+                                }   
+                              }   
+                            }   
+                          }   
+                        }   
+                      }   
+                      { NIL } 
+                    }   
+                    { NIL } 
+                  }   
+                }   
+                {  ST 
+                  {  FUNC 
+                    {  "$static_0" 
+                      { NIL } 
+                      {  VOID 
+                        { NIL } 
+                        { NIL } 
+                      }   
                     }   
                     {  ST 
-                      {  VAR 
-                        {  "b"   }   
-                        {  0   }   
+                      {  OUT 
+                        {  PARAM 
+                          $db::str  {  'Goodbye from last static block'   } $ 
+                          {  PARAM 
+                            $db::str  {  ENDL 
+                              { NIL } 
+                              { NIL } 
+                            } $ 
+                            { NIL } 
+                          }   
+                        }   
+                        { NIL } 
+                      }   
+                      { NIL } 
+                    }   
+                  }   
+                  {  ST 
+                    {  FUNC 
+                      {  "main" 
+                        { NIL } 
+                        {  VOID 
+                          { NIL } 
+                          { NIL } 
+                        }   
                       }   
                       {  ST 
                         {  VAR 
-                          {  "c"   }   
+                          {  "a"   }   
                           {  0   }   
                         }   
                         {  ST 
-                          {  EQ 
-                            {  "a"   }   
-                            {  CALL 
-                              {  "readCoeff"   }   
-                              { NIL } 
-                            }   
+                          {  VAR 
+                            {  "b"   }   
+                            {  0   }   
                           }   
                           {  ST 
-                            {  EQ 
-                              {  "b"   }   
-                              {  CALL 
-                                {  "readCoeff"   }   
-                                { NIL } 
-                              }   
+                            {  VAR 
+                              {  "c"   }   
+                              {  0   }   
                             }   
                             {  ST 
                               {  EQ 
-                                {  "c"   }   
+                                {  "a"   }   
                                 {  CALL 
                                   {  "readCoeff"   }   
                                   { NIL } 
                                 }   
                               }   
                               {  ST 
-                                {  CALL 
-                                  {  "print" 
-                                    {  PARAM 
-                                      {  "a"   }   
-                                      {  PARAM 
-                                        {  "b"   }   
-                                        {  PARAM 
-                                          {  "c"   }   
-                                          { NIL } 
-                                        }   
-                                      }   
-                                    }   
+                                {  EQ 
+                                  {  "b"   }   
+                                  {  CALL 
+                                    {  "readCoeff"   }   
                                     { NIL } 
                                   }   
-                                  { NIL } 
                                 }   
                                 {  ST 
-                                  {  IF 
-                                    {  IS_EE 
-                                      {  "a"   }   
-                                      {  0   }   
+                                  {  EQ 
+                                    {  "c"   }   
+                                    {  CALL 
+                                      {  "readCoeff"   }   
+                                      { NIL } 
                                     }   
-                                    {  ST 
-                                      {  CALL 
-                                        {  "evalLine" 
+                                  }   
+                                  {  ST 
+                                    {  CALL 
+                                      {  "print" 
+                                        {  PARAM 
+                                          {  "a"   }   
                                           {  PARAM 
                                             {  "b"   }   
                                             {  PARAM 
@@ -424,113 +413,97 @@
                                               { NIL } 
                                             }   
                                           }   
-                                          { NIL } 
                                         }   
                                         { NIL } 
                                       }   
-                                      {  ST 
-                                        {  CALL 
-                                          {  "$static_0"   }   
-                                          { NIL } 
-                                        }   
-                                        {  ST 
-                                          {  RET 
-                                            { NIL } 
-                                            { NIL } 
-                                          }   
-                                          { NIL } 
-                                        }   
-                                      }   
-                                    }   
-                                  }   
-                                  {  ST 
-                                    {  VAR 
-                                      {  "D"   }   
-                                      {  SUB 
-                                        {  MUL 
-                                          {  "b"   }   
-                                          {  "b"   }   
-                                        }   
-                                        {  MUL 
-                                          {  MUL 
-                                            {  4   }   
-                                            {  "a"   }   
-                                          }   
-                                          {  "c"   }   
-                                        }   
-                                      }   
+                                      { NIL } 
                                     }   
                                     {  ST 
                                       {  IF 
-                                        {  IS_BT 
-                                          {  "D"   }   
+                                        {  IS_EE 
+                                          {  "a"   }   
                                           {  0   }   
                                         }   
-                                        {  ELSE 
-                                          {  OUT 
-                                            {  PARAM 
-                                              $db::str  {  'No roots!'   } $ 
+                                        {  ST 
+                                          {  CALL 
+                                            {  "evalLine" 
                                               {  PARAM 
-                                                $db::str  {  ENDL 
+                                                {  "b"   }   
+                                                {  PARAM 
+                                                  {  "c"   }   
                                                   { NIL } 
-                                                  { NIL } 
-                                                } $ 
-                                                { NIL } 
+                                                }   
                                               }   
+                                              { NIL } 
                                             }   
                                             { NIL } 
                                           }   
+                                          {  ST 
+                                            {  CALL 
+                                              {  "$static_0"   }   
+                                              { NIL } 
+                                            }   
+                                            {  ST 
+                                              {  RET 
+                                                { NIL } 
+                                                { NIL } 
+                                              }   
+                                              { NIL } 
+                                            }   
+                                          }   
+                                        }   
+                                      }   
+                                      {  ST 
+                                        {  VAR 
+                                          {  "D"   }   
+                                          {  SUB 
+                                            {  MUL 
+                                              {  "b"   }   
+                                              {  "b"   }   
+                                            }   
+                                            {  MUL 
+                                              {  MUL 
+                                                {  4   }   
+                                                {  "a"   }   
+                                              }   
+                                              {  "c"   }   
+                                            }   
+                                          }   
+                                        }   
+                                        {  ST 
                                           {  IF 
-                                            {  IS_EE 
+                                            {  IS_BT 
                                               {  "D"   }   
                                               {  0   }   
                                             }   
                                             {  ELSE 
                                               {  OUT 
                                                 {  PARAM 
-                                                  $db::str  {  'Two roots: '   } $ 
+                                                  $db::str  {  'No roots!'   } $ 
                                                   {  PARAM 
-                                                    {  DIV 
-                                                      {  SUB 
-                                                        {  "b"   }   
-                                                        { NIL } 
-                                                      }   
-                                                      {  MUL 
-                                                        {  2   }   
-                                                        {  "a"   }   
-                                                      }   
-                                                    }   
-                                                    {  PARAM 
-                                                      $db::str  {  ENDL 
-                                                        { NIL } 
-                                                        { NIL } 
-                                                      } $ 
+                                                    $db::str  {  ENDL 
                                                       { NIL } 
-                                                    }   
+                                                      { NIL } 
+                                                    } $ 
+                                                    { NIL } 
                                                   }   
                                                 }   
                                                 { NIL } 
                                               }   
-                                              {  ST 
-                                                {  EQ 
+                                              {  IF 
+                                                {  IS_EE 
                                                   {  "D"   }   
-                                                  $db::math  {  SQRT 
-                                                    {  "D"   }   
-                                                    { NIL } 
-                                                  } $ 
+                                                  {  0   }   
                                                 }   
-                                                {  ST 
+                                                {  ELSE 
                                                   {  OUT 
                                                     {  PARAM 
-                                                      $db::str  {  'First  root: '   } $ 
+                                                      $db::str  {  'Two roots: '   } $ 
                                                       {  PARAM 
                                                         {  DIV 
-                                                          {  ADD 
-                                                            {  SUB 
-                                                              {  "b"   }   
-                                                              { NIL } 
-                                                            }   
-                                                            {  "D"   }   
+                                                          {  SUB 
+                                                            {  "b"   }   
+                                                            { NIL } 
                                                           }   
                                                           {  MUL 
                                                             {  2   }   
@@ -542,61 +515,100 @@
                                                             { NIL } 
                                                             { NIL } 
                                                           } $ 
-                                                          {  PARAM 
-                                                            $db::str  {  'Second root: '   } $ 
-                                                            {  PARAM 
-                                                              {  DIV 
-                                                                {  SUB 
-                                                                  {  SUB 
-                                                                    {  "b"   }   
-                                                                    { NIL } 
-                                                                  }   
-                                                                  {  "D"   }   
-                                                                }   
-                                                                {  MUL 
-                                                                  {  2   }   
-                                                                  {  "a"   }   
-                                                                }   
-                                                              }   
-                                                              {  PARAM 
-                                                                $db::str  {  ENDL 
-                                                                  { NIL } 
-                                                                  { NIL } 
-                                                                } $ 
-                                                                { NIL } 
-                                                              }   
-                                                            }   
-                                                          }   
+                                                          { NIL } 
                                                         }   
                                                       }   
                                                     }   
                                                     { NIL } 
                                                   }   
                                                   {  ST 
-                                                    {  CALL 
-                                                      {  "$static_0"   }   
-                                                      { NIL } 
+                                                    {  EQ 
+                                                      {  "D"   }   
+                                                      $db::math  {  SQRT 
+                                                        {  "D"   }   
+                                                        { NIL } 
+                                                      } $ 
                                                     }   
                                                     {  ST 
-                                                      {  RET 
-                                                        { NIL } 
+                                                      {  OUT 
+                                                        {  PARAM 
+                                                          $db::str  {  'First  root: '   } $ 
+                                                          {  PARAM 
+                                                            {  DIV 
+                                                              {  ADD 
+                                                                {  SUB 
+                                                                  {  "b"   }   
+                                                                  { NIL } 
+                                                                }   
+                                                                {  "D"   }   
+                                                              }   
+                                                              {  MUL 
+                                                                {  2   }   
+                                                                {  "a"   }   
+                                                              }   
+                                                            }   
+                                                            {  PARAM 
+                                                              $db::str  {  ENDL 
+                                                                { NIL } 
+                                                                { NIL } 
+                                                              } $ 
+                                                              {  PARAM 
+                                                                $db::str  {  'Second root: '   } $ 
+                                                                {  PARAM 
+                                                                  {  DIV 
+                                                                    {  SUB 
+                                                                      {  SUB 
+                                                                        {  "b"   }   
+                                                                        { NIL } 
+                                                                      }   
+                                                                      {  "D"   }   
+                                                                    }   
+                                                                    {  MUL 
+                                                                      {  2   }   
+                                                                      {  "a"   }   
+                                                                    }   
+                                                                  }   
+                                                                  {  PARAM 
+                                                                    $db::str  {  ENDL 
+                                                                      { NIL } 
+                                                                      { NIL } 
+                                                                    } $ 
+                                                                    { NIL } 
+                                                                  }   
+                                                                }   
+                                                              }   
+                                                            }   
+                                                          }   
+                                                        }   
                                                         { NIL } 
                                                       }   
-                                                      { NIL } 
+                                                      {  ST 
+                                                        {  CALL 
+                                                          {  "$static_0"   }   
+                                                          { NIL } 
+                                                        }   
+                                                        {  ST 
+                                                          {  RET 
+                                                            { NIL } 
+                                                            { NIL } 
+                                                          }   
+                                                          { NIL } 
+                                                        }   
+                                                      }   
                                                     }   
                                                   }   
                                                 }   
                                               }   
                                             }   
                                           }   
+                                          {  ST 
+                                            {  CALL 
+                                              {  "$static_0"   }   
+                                              { NIL } 
+                                            }   
+                                            { NIL } 
+                                          }   
                                         }   
-                                      }   
-                                      {  ST 
-                                        {  CALL 
-                                          {  "$static_0"   }   
-                                          { NIL } 
-                                        }   
-                                        { NIL } 
                                       }   
                                     }   
                                   }   
@@ -607,9 +619,9 @@
                         }   
                       }   
                     }   
+                    { NIL } 
                   }   
                 }   
-                { NIL } 
               }   
             }   
           }   

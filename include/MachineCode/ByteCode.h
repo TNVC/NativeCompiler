@@ -4,6 +4,7 @@
 
 namespace db
 {
+  const size_t SOFTCPU_RAM_SIZE = 10000;
 
   typedef int  data_t;
   typedef char  cmd_t;
@@ -18,21 +19,21 @@ namespace db
   enum Register { rax, rbx, rcx, rdx, rex, rfx };
 
   enum OpCode {
-    #define DEF_CMD(name, num, hasArg, isProducer, ...)  \
+    #define DEF_CMD(name, num, ...)  \
       OpCode_##name = num,
 
     #include "cmd.in"
-
-    #undef DEF_CMD
   };
 
   struct Cmd {
     CmdHeader header;
     data_t data;
     cmd_t   reg;
+    size_t position;
   };
 
   struct ByteCode {
+    size_t bytes;
     size_t size;
     Cmd *data;
   };

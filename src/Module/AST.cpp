@@ -1,5 +1,7 @@
 #include "Module/AST.h"
 
+#include "Utils/ErrorMessage.h"
+
 #include <malloc.h>
 #include <cstring>
 #include <cctype>
@@ -63,13 +65,7 @@ namespace db
     AST *ast =
         (AST *) calloc(1, sizeof(AST));
     if (!ast)
-      {
-        fprintf(stderr,
-                "Out of memory. File: \"%s\", Line: %d.\n",
-                __FILE__, __LINE__);
-        fclose(file);
-        return nullptr;
-      }
+      OUT_OF_MEMORY(return nullptr);
 
     bool hasError = false;
     ast->root =
@@ -188,12 +184,7 @@ namespace db
     ASTNode *node =
         (ASTNode *) calloc(1, sizeof(ASTNode));
     if (!node)
-      {
-        fprintf(stderr,
-                "Out of memory. File \"%s\", Line: %d.\n",
-                __FILE__, __LINE__);
-        return nullptr;
-      }
+      OUT_OF_MEMORY(return nullptr);
 
     node->type = Statement;
     node->value.statement = statement;
@@ -207,22 +198,12 @@ namespace db
     ASTNode *node =
         (ASTNode *) calloc(1, sizeof(ASTNode));
     if (!node)
-      {
-        fprintf(stderr,
-                "Out of memory. File \"%s\", Line: %d.\n",
-                __FILE__, __LINE__);
-        return nullptr;
-      }
+      OUT_OF_MEMORY(return nullptr);
 
     node->type = String;
     node->value.string = strdup(string);
     if (!node->value.string)
-          {
-            fprintf(stderr,
-                    "Out of memory. File \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+      OUT_OF_MEMORY(return nullptr);
 
     return node;
   }
@@ -233,22 +214,12 @@ namespace db
     ASTNode *node =
         (ASTNode *) calloc(1, sizeof(ASTNode));
     if (!node)
-      {
-        fprintf(stderr,
-                "Out of memory. File \"%s\", Line: %d.\n",
-                __FILE__, __LINE__);
-        return nullptr;
-      }
+      OUT_OF_MEMORY(return nullptr);
 
     node->type = Name;
     node->value.name = strdup(name);
     if (!node->value.name)
-          {
-            fprintf(stderr,
-                    "Out of memory. File \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+      OUT_OF_MEMORY(return nullptr);
 
     return node;
   }
@@ -257,12 +228,7 @@ namespace db
     ASTNode *node =
         (ASTNode *) calloc(1, sizeof(ASTNode));
     if (!node)
-      {
-        fprintf(stderr,
-                "Out of memory. File \"%s\", Line: %d.\n",
-                __FILE__, __LINE__);
-        return nullptr;
-      }
+      OUT_OF_MEMORY(return nullptr);
 
     node->type = Number;
     node->value.number = value;

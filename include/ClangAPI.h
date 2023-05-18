@@ -17,7 +17,7 @@
 #pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
 
-//#include <clang-c/Index.h>
+//#include <clang-c/NameIndex.h>
 //#include <clang/AST/Decl.h>
 //#include <clang/AST/DeclBase.h>
 //#include <clang/AST/Expr.h>

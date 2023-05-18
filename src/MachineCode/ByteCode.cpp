@@ -1,5 +1,7 @@
 #include "MachineCode/ByteCode.h"
 
+#include "Utils/ErrorMessage.h"
+
 #include <cstdio>
 #include <cstring>
 #include <malloc.h>
@@ -23,33 +25,21 @@ namespace db
         return nullptr;
       }
 
-    size_t cmdCount = 0;
-    if (!CheckFileType(file, &cmdCount)) { fclose(file); return nullptr; }
+    size_t byteCount = 0;
+    if (!CheckFileType(file, &byteCount)) { fclose(file); return nullptr; }
 
     ByteCode *code =
         (ByteCode *) calloc(1, sizeof(ByteCode));
     if (!code)
-     {
-       fprintf(stderr,
-               "Out of memory. File: \"%s\", Line: %d.\n",
-               __FILE__, __LINE__);
-       fclose(file);
-       return nullptr;
-     }
+     OUT_OF_MEMORY(fclose(file); return nullptr);
 
-    code->size = cmdCount;
+    code->size = byteCount;
     code->data =
-        (Cmd *) calloc(cmdCount, sizeof(Cmd));
+        (Cmd *) calloc(byteCount, sizeof(Cmd));
     if (!code->data)
-     {
-       fprintf(stderr,
-               "Out of memory. File: \"%s\", Line: %d.\n",
-               __FILE__, __LINE__);
-       free(code);
-       fclose(file);
-       return nullptr;
-     }
+      OUT_OF_MEMORY(free(code); fclose(file); return nullptr);
 
+    size_t currentPosition = 0;
     size_t index = 0;
     Cmd cmd{};
     while (fread(&cmd.header, sizeof(CmdHeader), 1, file))
@@ -77,11 +67,23 @@ namespace db
            return nullptr;
          }
 
+        cmd.position = currentPosition;
+        currentPosition += sizeof(cmd.header);
+        currentPosition += cmd.header.immed ? 4 : 0;
+        currentPosition += cmd.header.reg   ? 1 : 0;
         code->data[index++] = cmd;
-        if (index == cmdCount) break;
       }
 
     fclose(file);
+
+    Cmd *temp =
+        (Cmd *) realloc(code->data, index*sizeof(Cmd));
+    if (!temp)
+      OUT_OF_MEMORY(free(code->data); free(code); return nullptr);
+    code->size = index;
+    code->data = temp;
+    code->bytes = byteCount;
+
     return code;
   }
 

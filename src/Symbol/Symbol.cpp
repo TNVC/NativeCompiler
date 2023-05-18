@@ -1,5 +1,7 @@
 #include "Symbol/Symbol.h"
 
+#include "Utils/ErrorMessage.h"
+
 #include <malloc.h>
 #include <cstring>
 #include <cstdio>
@@ -21,12 +23,7 @@ namespace db
         Variable *temp = (Variable *)
             reallocarray(globals->data, elementCount, sizeof(Variable));
         if (!temp)
-          {
-            fprintf(stderr,
-                    "Out of memory. File: \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+          OUT_OF_MEMORY(return nullptr);
 
         globals->data = temp;
         globals->capacity = elementCount;
@@ -49,12 +46,7 @@ namespace db
         Function *temp = (Function *)
             reallocarray(functions->data, elementCount, sizeof(Function));
         if (!temp)
-          {
-            fprintf(stderr,
-                    "Out of memory. File: \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+          OUT_OF_MEMORY(return nullptr);
 
         functions->data = temp;
         functions->capacity = elementCount;
@@ -77,12 +69,7 @@ namespace db
         Variable *temp = (Variable *)
             reallocarray(params->data, elementCount, sizeof(Variable));
         if (!temp)
-          {
-            fprintf(stderr,
-                    "Out of memory. File: \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+          OUT_OF_MEMORY(return nullptr);
 
         params->data = temp;
         params->capacity = elementCount;
@@ -105,12 +92,7 @@ Variable *AddLocalVariable(Function *function, const char *name, llvm::Value *va
         Variable *temp = (Variable *)
             reallocarray(locals->data, elementCount, sizeof(Variable));
         if (!temp)
-          {
-            fprintf(stderr,
-                    "Out of memory. File: \"%s\", Line: %d.\n",
-                    __FILE__, __LINE__);
-            return nullptr;
-          }
+          OUT_OF_MEMORY(return nullptr);
 
         locals->data = temp;
         locals->capacity = elementCount;

@@ -1,37 +1,52 @@
 #include "Module/Module.h"
 #include "MachineCode/x86Code.h"
 #include "MachineCode/JIT.h"
-#include "MachineCode/AOT.h"
+#include "MachineCode/Native.h"
 
-#include <cassert>
+#include <cstdio>
+#include <cstring>
 
-int main()
+int main(const int argc, const char *const argv[])
   {
-    //db::ByteCode *byteCode =
-    //    db::GetByteCode("../source/a.bin");
-    //assert(byteCode);
+    if (argc < 3) goto Exit;
 
-    db::AST *ast =
-        db::GetAST("../source/syntax.std");
-    assert(ast);
+    if (!strcmp(argv[1], "--jit"))
+      {//../source/a.bin
+        db::ByteCode *byteCode =
+            db::GetByteCode(argv[2]);
+        db::X86Code *x86Code = nullptr;
+            //db::GenerateX86CodeFromByteCode(byteCode);
 
-    db::Module *theModule =
-    //    db::GenerateModuleFromByteCode(byteCode);
-        db::GenerateModuleFromAST(ast);
-    assert(theModule);
+        db::jit::ExecuteX86Code(x86Code);
 
-    theModule->theModule->print(llvm::errs(), nullptr);
+        db::DestroyX86Code(x86Code);
+        db::DestroyByteCode(byteCode);
+      }
+    else
+      {
+        db::AST *ast =
+            db::GetAST(argv[1]);
+        db::Module *theModule =
+            db::GenerateModuleFromAST(ast);
 
-    db::X86Code *x86Code =
-        db::GenerateX86CodeFromModule(theModule);
-    assert(x86Code);
+        theModule->theModule->print(llvm::errs(), nullptr);
 
-    //db::jit::ExecuteX86Code(x86Code);
-    db::aot::GenerateElf(x86Code, "../source/a.out");
+        db::X86Code *x86Code =
+            db::GenerateX86CodeFromModule(theModule);
 
-    db::DestroyX86Code(x86Code);
-    db::DestroyModule(theModule);
-    db::DestroyAST(ast);
-    //db::DestroyByteCode(byteCode);
+        db::native::GenerateElf(x86Code, argv[2]);
+
+        db::DestroyX86Code(x86Code);
+        db::DestroyModule(theModule);
+        db::DestroyAST(ast);
+      }
+
+    return 0;
+  Exit:
+    printf("No source file.\n"
+           "Use %s [flags] [source file name] [destiny file name]\n"
+           "Examples:\n"
+           "%s --jit file.bin\n"
+           "%s file.std file.out\n", argv[0], argv[0], argv[0]);
     return 0;
   }

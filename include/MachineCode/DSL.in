@@ -1,0 +1,276 @@
+#define ARITHMETIC_DATA(CMD_DATA)                                                             \
+  unsigned char data[] =                                                                      \
+      {                                                                                       \
+          0x41, 0x5F, /*pop r15*/                                                             \
+          0x41, 0x5e, /*pop r14*/                                                             \
+          0x48, 0x85, 0xF6, /*test rsi, rsi*/                                                 \
+          0x74, 0x58, /*je .INTEGER*/                                                         \
+          0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+          0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+          0x41, 0x5D, /*pop r13*/                                                             \
+          0x41, 0x5C, /*pop r12*/                                                             \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC6, /*cvtsi2sd xmm0, r14*/                                \
+          0xF2, 0x0F, 0x5E, 0xC3, /*divsd xmm0, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCF, /*cvtsi2sd xmm1, r15*/                                \
+          0xF2, 0x0F, 0x58, 0xC1, /*addsd xmm0, xmm1*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCC, /*cvtsi2sd xmm1, r12*/                                \
+          0xF2, 0x0F, 0x5E, 0xCB, /*divsd xmm1, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xD5, /*cvtsi2sd xmm2, r13*/                                \
+          0xF2, 0x0F, 0x58, 0xCA, /*adds xmm1, xmm2*/                                         \
+          CMD_DATA,                                                                           \
+          0xF2, 0x4C, 0x0F, 0x2C, 0xF9, /*cvttsd2si r15, xmm1*/                               \
+          0xF2, 0x49, 0x0F, 0x2A, 0xD7, /*cvtsi2sd xmm2, r15*/                                \
+          0xF2, 0x0F, 0x5C, 0xCA, /*subsd xmm1, xmm2*/                                        \
+          0xF2, 0x0F, 0x59, 0xCB, /*mulsd xmm1, xmm3*/                                        \
+          0xF2, 0x4C, 0x0F, 0x2C, 0xF1, /*cvttsd2si r14, xmm1*/                               \
+          0x41, 0x57, /*push r15*/                                                            \
+          0x41, 0x56, /*push r14*/                                                            \
+          0xEB, 0x15, /*jmp .End*/                                                            \
+          /*.INTEGER:*/                                                                       \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          CMD_DATA,                                                                           \
+          0xF2, 0x4C, 0x0F, 0x2C, 0xF1, /*cvttsd2si r14, xmm1*/                               \
+          0x41, 0x56, /*push r14*/                                                            \
+          /*.End:*/                                                                           \
+      }
+
+#define ADD_DATA 0xF2, 0x0F, 0x58, 0xC8 /*addsd xmm1, xmm0*/
+#define SUB_DATA 0xF2, 0x0F, 0x5C, 0xC8 /*subsd xmm1, xmm0*/
+#define MUL_DATA 0xF2, 0x0F, 0x59, 0xC8 /*mulsd xmm1, xmm0*/
+#define DIV_DATA 0xF2, 0x0F, 0x5E, 0xC8 /*divsd xmm1, xmm0*/
+
+#define COMPARE_DATA(CMD_DATA)                                                                \
+  unsigned char data[] =                                                                      \
+      {                                                                                       \
+          0x41, 0x5F, /*pop r15*/                                                             \
+          0x41, 0x5e, /*pop r14*/                                                             \
+          0x48, 0x85, 0xF6, /*test rsi, rsi*/                                                 \
+          0x74, 0x51, /*je .INTEGER*/                                                         \
+          0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+          0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+          0x41, 0x5D, /*pop r13*/                                                             \
+          0x41, 0x5C, /*pop r12*/                                                             \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x0F, 0x5E, 0xCB, /*divsd xmm1, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          0xF2, 0x0F, 0x58, 0xC8, /*addsd xmm1, xmm0*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC4, /*cvtsi2sd xmm0, r12*/                                \
+          0xF2, 0x0F, 0x5E, 0xC3, /*divsd xmm0, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xD5, /*cvtsi2sd xmm2, r13*/                                \
+          0xF2, 0x0F, 0x58, 0xC2, /*adds xmm0, xmm2*/                                         \
+          CMD_DATA,                                                                           \
+          0xC4, 0xC1, 0xF9, 0x7E, 0xD6, /*vmovq r14, xmm2*/                                   \
+          0x4D, 0x31, 0xFF, /*xor r15, r15*/                                                  \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x41, 0x0F, 0x94, 0xC7, /*setz r15b*/                                               \
+          0x6A, 0x00, /*push 0*/                                                              \
+          0x41, 0x57, /*push r15*/                                                            \
+          0xEB, 0x1B, /*jmp .End*/                                                            \
+          /*.INTEGER:*/                                                                       \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          CMD_DATA,                                                                           \
+          0x4D, 0x31, 0xFF, /*xor r15, r15*/                                                  \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x41, 0x0F, 0x94, 0xC7, /*setz r15b*/                                               \
+          0x41, 0x57  /*push r15*/                                                            \
+          /*.End:*/                                                                           \
+      }
+
+#define  EQ_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x00 /*vcmpeqsd  xmm2, xmm0, xmm1*/
+#define NEQ_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x04 /*vcmpneqsd xmm2, xmm0, xmm1*/
+#define  LT_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x01 /*vcmpltsd  xmm2, xmm0, xmm1*/
+#define  GT_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x0E /*vcmpgtsd  xmm2, xmm0, xmm1*/
+
+#define JUMP_DATA(CMD_DATA)                                                                   \
+  unsigned char data[] =                                                                      \
+      {                                                                                       \
+          0x41, 0x5F, /*pop r15*/                                                             \
+          0x41, 0x5E, /*pop r14*/                                                             \
+          0x48, 0x85, 0xF6, /*test rsi, rsi*/                                                 \
+          0x74, 0x4A, /*je .INTEGER*/                                                         \
+          0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+          0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+          0x41, 0x5D, /*pop r13*/                                                             \
+          0x41, 0x5C, /*pop r12*/                                                             \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x0F, 0x5E, 0xCB, /*divsd xmm1, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          0xF2, 0x0F, 0x58, 0xC8, /*addsd xmm1, xmm0*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC4, /*cvtsi2sd xmm0, r12*/                                \
+          0xF2, 0x0F, 0x5E, 0xC3, /*divsd xmm0, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xD5, /*cvtsi2sd xmm2, r13*/                                \
+          0xF2, 0x0F, 0x58, 0xC2, /*adds xmm0, xmm2*/                                         \
+          CMD_DATA,                                                                           \
+          0xC4, 0xC1, 0xF9, 0x7E, 0xD6, /*vmovq r14, xmm2*/                                   \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x0F, 0x84, 0x00, 0x00, 0x00, 0x00, /*jz 0x0*/                                      \
+          /*.INTEGER:*/                                                                       \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          CMD_DATA,                                                                           \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x0F, 0x84, 0x00, 0x00, 0x00, 0x00, /*jz 0x0*/                                      \
+      }
+
+#define  JB_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x01 /*vcmpltsd  xmm2, xmm0, xmm1*/
+#define JBE_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x02 /*vcmplesd  xmm2, xmm0, xmm1*/
+#define  JA_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x0E /*vcmpgtsd  xmm2, xmm0, xmm1*/
+#define JAE_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x0D /*vcmpgesd  xmm2, xmm0, xmm1*/
+#define  JE_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x00 /*vcmpeqsd  xmm2, xmm0, xmm1*/
+#define JNE_DATA 0xC5, 0xFB, 0xC2, 0xD1, 0x04 /*vcmpneqsd xmm2, xmm0, xmm1*/
+
+#define LOGIC_DATA(CMD_DATA)                                                                  \
+  unsigned char data[] =                                                                      \
+      {                                                                                       \
+          0x41, 0x5F, /*pop r15*/                                                             \
+          0x41, 0x5e, /*pop r14*/                                                             \
+          0x48, 0x85, 0xF6, /*test rsi, rsi*/                                                 \
+          0x74, 0x51, /*je .INTEGER*/                                                         \
+          0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+          0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+          0x41, 0x5D, /*pop r13*/                                                             \
+          0x41, 0x5C, /*pop r12*/                                                             \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x0F, 0x5E, 0xCB, /*divsd xmm1, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          0xF2, 0x0F, 0x58, 0xC8, /*addsd xmm1, xmm0*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC4, /*cvtsi2sd xmm0, r12*/                                \
+          0xF2, 0x0F, 0x5E, 0xC3, /*divsd xmm0, xmm3*/                                        \
+          0xF2, 0x49, 0x0F, 0x2A, 0xD5, /*cvtsi2sd xmm2, r13*/                                \
+          0xF2, 0x0F, 0x58, 0xC2, /*adds xmm0, xmm2*/                                         \
+          CMD_DATA,                                                                           \
+          0xC4, 0xC1, 0xF9, 0x7E, 0xD6, /*vmovq r14, xmm2*/                                   \
+          0x4D, 0x31, 0xFF, /*xor r15, r15*/                                                  \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x41, 0x0F, 0x94, 0xC7, /*setz r15b*/                                               \
+          0x6A, 0x00, /*push 0*/                                                              \
+          0x41, 0x57, /*push r15*/                                                            \
+          0xEB, 0x1B, /*jmp .End*/                                                            \
+          /*.INTEGER:*/                                                                       \
+          0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+          0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+          CMD_DATA,                                                                           \
+          0x4D, 0x31, 0xFF, /*xor r15, r15*/                                                  \
+          0x4D, 0x85, 0xF6, /*test r14, r14*/                                                 \
+          0x41, 0x0F, 0x94, 0xC7, /*setz r15b*/                                               \
+          0x41, 0x57  /*push r15*/                                                            \
+          /*.End:*/                                                                           \
+      }
+
+#define AND_DATA 0xC5, 0xF9, 0x54, 0xD1 /*vandsd xmm2, xmm0, xmm1*/
+#define  OR_DATA 0xC5, 0xF9, 0x56, 0xD1 /*vorsd  xmm2, xmm0, xmm1*/
+
+#define  RET_DATA 0xC3 /*ret*/
+#define  JMP_DATA 0xE9, 0x00, 0x00, 0x00, 0x00 /*jmp 0x0*/
+#define CALL_DATA 0xE8, 0x00, 0x00, 0x00, 0x00 /*call 0x0*/
+#define  NOP_DATA 0x90 /*nop*/
+
+#define PUSH_REG_DATA    \
+  unsigned char data[] = \
+    {                    \
+      0x50, /*push rax*/ \
+      0x53, /*push rbx*/ \
+      0x51, /*push rcx*/ \
+      0x52, /*push rdx*/ \
+      0x56, /*push rsi*/ \
+      0x57  /*push rdi*/ \
+    }
+
+#define PUSH_IMMEDIATE_DATA 0x68, 0x00, 0x00, 0x00, 0x00 /*push 0x0*/
+
+#define PUSH_MEM_REG_OFFSET_DATA                                                   \
+  unsigned char data[][8] =                                                        \
+    {                                                                              \
+      0x41, 0xFF, 0xB4, 0xC2, 0x00, 0x00, 0x00, 0x00, /*push [8*rax + r10 + 0x0]*/ \
+      0x41, 0xFF, 0xB4, 0xDA, 0x00, 0x00, 0x00, 0x00, /*push [8*rbx + r10 + 0x0]*/ \
+      0x41, 0xFF, 0xB4, 0xCA, 0x00, 0x00, 0x00, 0x00, /*push [8*rcx + r10 + 0x0]*/ \
+      0x41, 0xFF, 0xB4, 0xD2, 0x00, 0x00, 0x00, 0x00, /*push [8*rdx + r10 + 0x0]*/ \
+      0x41, 0xFF, 0xB4, 0xF2, 0x00, 0x00, 0x00, 0x00, /*push [8*rsi + r10 + 0x0]*/ \
+      0x41, 0xFF, 0xB4, 0xFA, 0x00, 0x00, 0x00, 0x00  /*push [8*rdi + r10 + 0x0]*/ \
+    }
+
+#define PUSH_MEM_OFFSET 0xFF, 0x35, 0x00, 0x00, 0x00, 0x00 /*push [0x0]*/
+
+#define POP_REG_DATA     \
+  unsigned char data[] = \
+    {                    \
+      0x58, /*pop rax*/  \
+      0x5B, /*pop rbx*/  \
+      0x59, /*pop rcx*/  \
+      0x5A, /*pop rdx*/  \
+      0x5E, /*pop rsi*/  \
+      0x5F  /*pop rdi*/  \
+    }
+
+#define POP_MEM_REG_OFFSET_DATA                                                   \
+  unsigned char data[][8] =                                                       \
+    {                                                                             \
+      0x41, 0x8F, 0x84, 0xC2, 0x00, 0x00, 0x00, 0x00, /*pop [8*rax + r10 + 0x0]*/ \
+      0x41, 0x8F, 0x84, 0xDA, 0x00, 0x00, 0x00, 0x00, /*pop [8*rbx + r10 + 0x0]*/ \
+      0x41, 0x8F, 0x84, 0xCA, 0x00, 0x00, 0x00, 0x00, /*pop [8*rcx + r10 + 0x0]*/ \
+      0x41, 0x8F, 0x84, 0xD2, 0x00, 0x00, 0x00, 0x00, /*pop [8*rdx + r10 + 0x0]*/ \
+      0x41, 0x8F, 0x84, 0xF2, 0x00, 0x00, 0x00, 0x00, /*pop [8*rsi + r10 + 0x0]*/ \
+      0x41, 0x8F, 0x84, 0xFA, 0x00, 0x00, 0x00, 0x00  /*pop [8*rdi + r10 + 0x0]*/ \
+    }
+
+#define POP_MEM_OFFSET 0x8F, 0x05, 0x00, 0x00, 0x00, 0x00 /*pop [0x0]*/
+
+#define LIBRARY_CALL_DATA                                                                   \
+  unsigned char data[] =                                                                    \
+      {                                                                                     \
+        0x41, 0x5F, /*pop r15*/                                                             \
+        0x41, 0x5E, /*pop r14*/                                                             \
+        0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+        0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+        0x50, /*push rax*/                                                                  \
+        0x53, /*push rbx*/                                                                  \
+        0x51, /*push rcx*/                                                                  \
+        0x52, /*push rdx*/                                                                  \
+        0x56, /*push rsi*/                                                                  \
+        0x57, /*push rdi*/                                                                  \
+        0xF2, 0x49, 0x0F, 0x2A, 0xCE, /*cvtsi2sd xmm1, r14*/                                \
+        0xF2, 0x0F, 0x5E, 0xCB, /*divsd xmm1, xmm3*/                                        \
+        0xF2, 0x49, 0x0F, 0x2A, 0xC7, /*cvtsi2sd xmm0, r15*/                                \
+        0xF2, 0x0F, 0x58, 0xC8, /*addsd xmm1, xmm0*/                                        \
+        0xE8, 0x00, 0x00, 0x00, 0x00, /*call 0x0*/                                          \
+        0x5F, /*pop rdi*/                                                                   \
+        0x5E, /*pop rsi*/                                                                   \
+        0x5A, /*pop rdx*/                                                                   \
+        0x59, /*pop rcx*/                                                                   \
+        0x5B, /*pop rbx*/                                                                   \
+        0x58, /*pop rax*/                                                                   \
+        0x49, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0xC3, 0x40, /*movabs r13, 10000.0*/ \
+        0xC4, 0xC1, 0xF9, 0x6E, 0xDD, /*vmovq xmm3, r13*/                                   \
+        0xF2, 0x4C, 0x0F, 0x2C, 0xF8, /*cvttsd2si r15, xmm0*/                               \
+        0xF2, 0x49, 0x0F, 0x2A, 0xCF, /*cvtsi2sd xmm1, r15*/                                \
+        0xF2, 0x0F, 0x5C, 0xC1, /*subsd xmm0, xmm1*/                                        \
+        0xF2, 0x0F, 0x59, 0xC3, /*mulsd xmm0, xmm3*/                                        \
+        0xF2, 0x4C, 0x0F, 0x2C, 0xF0, /*cvttsd2si r14, xmm0*/                               \
+        0x41, 0x56, /*push r14*/                                                            \
+        0x41, 0x57, /*push r15*/                                                            \
+      }
+
+
+#define EPILOG_DATA                                         \
+  unsigned char data[] =                                    \
+      {                                                     \
+        0x41, 0x5A, /*pop r10*/                             \
+        0x41, 0x5f, /*pop r15*/                             \
+        0x41, 0x5E, /*pop r14*/                             \
+        0x5F, /*pop rdi*/                                   \
+        0x5E, /*pop rsi*/                                   \
+        0x5A, /*pop rdx*/                                   \
+        0x59, /*pop rcx*/                                   \
+        0x5B, /*pop rbx*/                                   \
+        0x58, /*pop rax*/                                   \
+        0xC3 /*ret*/                                        \
+      }
+
+
+#define OLD_POS (byteCode->data[i].position)
+#define NEW_POS (code->text.size)
+
+#define WRITE_CONSTANT(ADR, INT32) *((int32_t *) (ADR)) = (INT32)
+#define WRITE_LONG_CONSTANT(ADR, INT64) *((int64_t *) (ADR)) = (INT64)

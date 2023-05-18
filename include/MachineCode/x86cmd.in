@@ -1,0 +1,166 @@
+#pragma once
+
+#define WRITE_INT32(ADR, VAL) *((int32_t *) (ADR)) = (int32_t) (VAL)
+
+#define JMP_DATA 0xE9,       0x00, 0x00, 0x00, 0x00 /*jmp 0x0*/
+#define  JZ_DATA 0x0F, 0x84, 0x00, 0x00, 0x00, 0x00 /*jz  0x0*/
+#define RET_DATA 0xC3 /*ret*/
+#define TEST_RAX_RAX_DATA 0x48, 0x85, 0xC0 /*test rax, rax*/
+#define XOR_RAX_RAX_DATA 0x48, 0x31, 0xC0 /*xor rax, rax*/
+#define POP_RBP_DATA 0x5D
+#define ADD_RSP_IMM_DATA 0x48, 0x81, 0xC4, 0x00, 0x00, 0x00, 0x00
+#define PUSH_RBP_DATA 0x55
+#define MOV_RBP_RSP_DATA 0x48, 0x89, 0xE5
+#define SUB_RSP_IMM_DATA 0x48, 0x81, 0xEC, 0x00, 0x00, 0x00, 0x00
+#define CALL_DATA 0xE8, 0x00, 0x00, 0x00, 0x00
+
+#define XOR_EDI_EDI_DATA 0x31, 0xFF
+#define MOV_EAX_3C 0xB8, 0x3C, 0x00, 0x00, 0x00
+#define SYSCALL_DATA 0x0F, 0x05
+
+#define SQRT_DATA                                                                                         \
+    0x66, 0x48, 0x0F, 0x7E, 0xC3, 0x53, 0x66, 0x48, 0x0F, 0x7E, 0xCB, 0x53, 0x66, 0x48, 0x0F, 0x7E, 0xD3, \
+    0x53, 0x66, 0x48, 0x0F, 0x7E, 0xDB, 0x53, 0x66, 0x48, 0x0F, 0x6E, 0xC0, 0xF2, 0x0F, 0x5A, 0xC0, 0x66, \
+    0x0F, 0x7E, 0xC2, 0xB8, 0xF9, 0xFF, 0x1F, 0x5F, 0x49, 0xC7, 0xC6, 0x62, 0xE9, 0x18, 0x40, 0x66, 0x49, \
+    0x0F, 0x6E, 0xD6, 0xD1, 0xEA, 0x29, 0xD0, 0x66, 0x0F, 0x6E, 0xC8, 0xF3, 0x0F, 0x59, 0xC1, 0xF3, 0x0F, \
+    0x59, 0xC1, 0x49, 0xC7, 0xC6, 0x37, 0x36, 0x34, 0x3F, 0x66, 0x49, 0x0F, 0x6E, 0xDE, 0xF3, 0x0F, 0x59, \
+    0xCB, 0xF3, 0x0F, 0x5C, 0xD0, 0x49, 0xC7, 0xC6, 0x00, 0x00, 0x80, 0x3F, 0x66, 0x49, 0x0F, 0x6E, 0xC6, \
+    0xF3, 0x0F, 0x59, 0xCA, 0xF3, 0x0F, 0x5E, 0xC1, 0xF3, 0x0F, 0x5A, 0xC0, 0x66, 0x48, 0x0F, 0x7E, 0xC0, \
+    0x5B, 0x66, 0x48, 0x0F, 0x6E, 0xDB, 0x5B, 0x66, 0x48, 0x0F, 0x6E, 0xD3, 0x5B, 0x66, 0x48, 0x0F, 0x6E, \
+    0xCB, 0x5B, 0x66, 0x48, 0x0F, 0x6E, 0xC3, 0xC3
+
+#define PRINT_STRING_DATA                                                                                 \
+  0x49, 0x8D, 0x74, 0x05, 0x00, 0x31, 0xD2, 0x40, 0x8A, 0x3E, 0x48, 0xFF, 0xC6, 0xFF, 0xC2, 0x40, 0x84,   \
+  0xFF, 0x75, 0xF3, 0x49, 0x8D, 0x74, 0x05, 0x00, 0xBF, 0x01, 0x00, 0x00, 0x00, 0xB8, 0x01, 0x00, 0x00,   \
+  0x00, 0x0F, 0x05, 0x31, 0xC0, 0xC3
+
+#define EQ 0x00
+#define NE 0x04
+#define LT 0x01
+#define GT 0x0E
+
+#define WRITE_PUSH_REG(REG)                                             \
+  do {                                                                  \
+    unsigned char data[] =                                              \
+    {                                                                   \
+      0x50, 0x90, 0x51, 0x90, 0x52, 0x90, 0x53, 0x90, 0x54, 0x90, 0x55, \
+      0x90, 0x56, 0x90, 0x57, 0x90, 0x41, 0x50, 0x41, 0x51, 0x41, 0x52, \
+      0x41, 0x53, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57        \
+    };                                                                  \
+    Write(code, &data[(REG)*2], REG < R8 ? 1 : 2);                      \
+  } while (false)
+
+#define WRITE_POP_REG(REG)                                              \
+  do {                                                                  \
+    unsigned char data[] =                                              \
+    {                                                                   \
+      0x58, 0x90, 0x59, 0x90, 0x5A, 0x90, 0x5B, 0x90, 0x5C, 0x90, 0x5D, \
+      0x90, 0x5E, 0x90, 0x5F, 0x90, 0x41, 0x58, 0x41, 0x59, 0x41, 0x5A, \
+      0x41, 0x5B, 0x41, 0x5C, 0x41, 0x5D, 0x41, 0x5E, 0x41, 0x5F        \
+    };                                                                  \
+    Write(code, &data[(REG)*2], REG < R8 ? 1 : 2);                      \
+  } while (false)
+
+#define WRITE_VCMPSD(DST, SRC0, SRC1, TYPE)                                              \
+  do {                                                                                   \
+   SecondByte secondByte { 1, SRC1 < xmm8, true, DST < xmm8 };                           \
+   ThirdByte thirdByte                                                                   \
+     { 1, false, (unsigned char)(15 - SRC0), false };                                    \
+   FifthByte fifthByte                                                                   \
+     {                                                                                   \
+       (unsigned char)(DST  - (!secondByte.B)*8),                                        \
+       (unsigned char)(SRC1 - (!secondByte.R)*8),                                        \
+       0x3                                                                               \
+     };                                                                                  \
+   unsigned char opcode = 0xC2;                                                          \
+                                                                                         \
+   unsigned char data[] =                                                                \
+       { VEX_PREFIX, BYTE(secondByte), BYTE(thirdByte), opcode, BYTE(fifthByte), TYPE }; \
+                                                                                         \
+   Write(code, data, sizeof(data));                                                      \
+ } while (false)
+
+#define WRITE_VMOVQ_XMM_REG(TARGET, REG)                                          \
+  do {                                                                            \
+   SecondByte secondByte { 1, REG < R8, true, TARGET < xmm8 };                    \
+   ThirdByte thirdByte { 1, false, 0xF, true };                                   \
+   FifthByte fifthByte                                                            \
+     {                                                                            \
+       (unsigned char)(REG    - (!secondByte.R)*8),                               \
+       (unsigned char)(TARGET - (!secondByte.B)*8),                               \
+       0x3                                                                        \
+     };                                                                           \
+   unsigned char opcode = 0x6E;                                                   \
+                                                                                  \
+   unsigned char data[CMD_SIZE] =                                                 \
+       { VEX_PREFIX, BYTE(secondByte), BYTE(thirdByte), opcode, BYTE(fifthByte) };\
+   Write(code, data, sizeof(data));                                               \
+ } while (false)
+
+#define WRITE_VMOVQ_REG_XMM(REG, TARGET)                                          \
+  do {                                                                            \
+   SecondByte secondByte { 1, REG < R8, true, TARGET < xmm8 };                    \
+   ThirdByte thirdByte { 1, false, 0xF, true };                                   \
+   FifthByte fifthByte                                                            \
+     {                                                                            \
+       (unsigned char)(REG    - (!secondByte.R)*8),                               \
+       (unsigned char)(TARGET - (!secondByte.B)*8),                               \
+       0x3                                                                        \
+     };                                                                           \
+   unsigned char opcode = 0x7E;                                                   \
+                                                                                  \
+   unsigned char data[CMD_SIZE] =                                                 \
+       { VEX_PREFIX, BYTE(secondByte), BYTE(thirdByte), opcode, BYTE(fifthByte) };\
+   Write(code, data, sizeof(data));                                               \
+ } while (false)
+
+#define WRITE_MOVABS_REG(REG, VALUE)                                              \
+  do {                                                                            \
+    unsigned char prefix =  REG < R8 ? 0x48 : 0x49;                               \
+    unsigned char args = 0xB8 | (REG&7);                                          \
+                                                                                  \
+     const size_t size = 10;                                                      \
+     unsigned char data[size] = { prefix, args };                                 \
+     *((int64_t *) &data[2]) = (int64_t) (VALUE);                                 \
+     Write(code, data, sizeof(data));                                             \
+ } while (false)
+
+#define WRITE_MOV_REG_STACK(REG, VALUE)                                           \
+  do {                                                                            \
+   unsigned char args = 0x85 | ((REG&7) << 3);                                    \
+   const size_t size = 7;                                                         \
+   unsigned char data[size] = { (REG < R8 ? 0x48 : 0x4C), 0x8B, args };           \
+   *((int32_t *) &data[3]) = (int32_t) (VALUE);                                   \
+   Write(code, data, sizeof(data));                                               \
+ } while (false)
+
+#define WRITE_MOV_STACK_REG(VALUE, REG)                                                  \
+  do {                                                                                   \
+   unsigned char args = 0x85 | (unsigned char) ((REG&7) << 3);                           \
+   const size_t size = 7;                                                                \
+   unsigned char data[size] = { (unsigned char) (REG < R8 ? 0x48 : 0x4C), 0x89, args };  \
+   *((int32_t *) &data[3]) = (int32_t) (VALUE);                                          \
+   Write(code, data, sizeof(data));                                                      \
+ } while (false)
+
+
+#define WRITE_MOV_REG_MEM(REG, VALUE)                                             \
+  do {                                                                            \
+   unsigned char args = 0x87 | ((REG&7) << 3);                                    \
+   const size_t size = 7;                                                         \
+   unsigned char data[size] = { (REG < R8 ? 0x49 : 0x4D), 0x8B, args };           \
+   *((int32_t *) &data[3]) = (int32_t) (VALUE);                                   \
+   Write(code, data, sizeof(data));                                               \
+ } while (false)
+
+#define WRITE_MOV_MEM_REG(VALUE, REG)                                             \
+  do {                                                                            \
+   unsigned char args = 0x87 | ((REG&7) << 3);                                    \
+   const size_t size = 7;                                                         \
+   unsigned char data[size] = { (REG < R8 ? 0x49 : 0x4D), 0x89, args };           \
+   *((int32_t *) &data[3]) = (int32_t) (VALUE);                                   \
+   Write(code, data, sizeof(data));                                               \
+ } while (false)
+
+
+#define BYTE(STRUCT) (*(unsigned char *) &(STRUCT))
