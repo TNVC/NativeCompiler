@@ -886,11 +886,13 @@ namespace db
   {
     assert(context && values && locations && size <= REG_COUNT);
 
+    const size_t DEFAULT_REGS = 0;
+    const size_t XMM_REGS = 1;
     unsigned char regIndex[2] = {};
     bool isRegisterUsing[2][REG_COUNT] = {};
-    isRegisterUsing[0][RSP] = true;
-    isRegisterUsing[0][RBP] = true;
-    isRegisterUsing[0][R15] = true;
+    isRegisterUsing[DEFAULT_REGS][RSP] = true;
+    isRegisterUsing[DEFAULT_REGS][RBP] = true;
+    isRegisterUsing[DEFAULT_REGS][R15] = true;
 
     for (size_t i = 0; i < size; ++i)
       if (!llvm::isa<llvm::ConstantFP>(values[i]) && !llvm::isa<llvm::GlobalVariable>(values[i]))
@@ -898,24 +900,26 @@ namespace db
           if (!values[i]->getName().data()[0]) continue;
           location_t location =
               GetVariableLocation(context, values[i]->getName().data(), blockIndex);
-          if (location != mem) isRegisterUsing[1][location] = true;
+          if (location != mem) isRegisterUsing[XMM_REGS][location] = true;
         }
 
     #define EMIT_XMM(PREPARING, GETTING_VALUE)          \
         do {                                            \
           PREPARING                                     \
-          locations[i] = (location_t) regIndex[1];      \
-          WRITE_VMOVQ_REG_XMM(regIndex[0], regIndex[1]);\
+          locations[i] = (location_t) regIndex[XMM_REGS]; \
+          WRITE_VMOVQ_REG_XMM(regIndex[0], regIndex[XMM_REGS]);\
           GETTING_VALUE                                 \
-          WRITE_VMOVQ_XMM_REG(regIndex[1], R14);        \
-          isRegisterUsing[0][regIndex[0]] = true;       \
-          isRegisterUsing[1][regIndex[1]] = true;       \
+          WRITE_VMOVQ_XMM_REG(regIndex[XMM_REGS], R14); \
+          isRegisterUsing[DEFAULT_REGS][regIndex[DEFAULT_REGS]] = true; \
+          isRegisterUsing[XMM_REGS][regIndex[XMM_REGS]] = true;\
         } while (false)
 
     for (size_t i = 0; i < size; ++i)
       {
-        for ( ; regIndex[0] < REG_COUNT; ++regIndex[0]) if (!isRegisterUsing[0][regIndex[0]]) break;
-        for ( ; regIndex[1] < REG_COUNT; ++regIndex[1]) if (!isRegisterUsing[1][regIndex[1]]) break;
+        for ( ; regIndex[DEFAULT_REGS] < REG_COUNT; ++regIndex[DEFAULT_REGS])
+          if (!isRegisterUsing[DEFAULT_REGS][regIndex[DEFAULT_REGS]]) break;
+        for ( ; regIndex[XMM_REGS    ] < REG_COUNT; ++regIndex[XMM_REGS    ])
+          if (!isRegisterUsing[XMM_REGS    ][regIndex[XMM_REGS    ]]) break;
 
         llvm::Value *value = values[i];
         if (!llvm::isa<llvm::GlobalVariable>(value) &&
@@ -961,11 +965,13 @@ namespace db
   {
     assert(context && values && locations && size <= REG_COUNT);
 
+    const size_t DEFAULT_REGS = 0;
+    const size_t XMM_REGS = 1;
     unsigned char regIndex[2] = {};
     bool isRegisterUsing[2][REG_COUNT] = {};
-    isRegisterUsing[0][RSP] = true;
-    isRegisterUsing[0][RBP] = true;
-    isRegisterUsing[0][R15] = true;
+    isRegisterUsing[DEFAULT_REGS][RSP] = true;
+    isRegisterUsing[DEFAULT_REGS][RBP] = true;
+    isRegisterUsing[DEFAULT_REGS][R15] = true;
 
     for (size_t i = 0; i < size; ++i)
       if (!llvm::isa<llvm::ConstantFP>(values[i]) && !llvm::isa<llvm::GlobalVariable>(values[i]))
@@ -974,23 +980,25 @@ namespace db
 
           location_t location =
               GetVariableLocation(context, values[i]->getName().data(), blockIndex);
-          if (location != mem) isRegisterUsing[1][location] = true;
+          if (location != mem) isRegisterUsing[XMM_REGS][location] = true;
         }
 
     #define EMIT_XMM(PREPARING, PUTTING_VALUE)          \
         do {                                            \
           PREPARING                                     \
-          WRITE_VMOVQ_REG_XMM(R14, regIndex[1]);        \
+          WRITE_VMOVQ_REG_XMM(R14, regIndex[XMM_REGS]);        \
           PUTTING_VALUE                                 \
-          WRITE_VMOVQ_XMM_REG(regIndex[1], regIndex[0]);\
-          isRegisterUsing[0][regIndex[0]] = true;       \
-          isRegisterUsing[1][regIndex[1]] = true;       \
+          WRITE_VMOVQ_XMM_REG(regIndex[XMM_REGS], regIndex[DEFAULT_REGS]);\
+          isRegisterUsing[DEFAULT_REGS][regIndex[DEFAULT_REGS]] = true;       \
+          isRegisterUsing[XMM_REGS][regIndex[XMM_REGS]] = true; \
         } while (false)
 
     for (size_t i = 0; i < size; ++i)
       {
-        for ( ; regIndex[0] < REG_COUNT; ++regIndex[0]) if (!isRegisterUsing[0][regIndex[0]]) break;
-        for ( ; regIndex[1] < REG_COUNT; ++regIndex[1]) if (!isRegisterUsing[1][regIndex[1]]) break;
+        for ( ; regIndex[DEFAULT_REGS] < REG_COUNT; ++regIndex[DEFAULT_REGS])
+          if (!isRegisterUsing[DEFAULT_REGS][regIndex[DEFAULT_REGS]]) break;
+        for ( ; regIndex[XMM_REGS    ] < REG_COUNT; ++regIndex[XMM_REGS    ])
+          if (!isRegisterUsing[XMM_REGS    ][regIndex[XMM_REGS    ]]) break;
 
         llvm::Value *value = values[i];
         if (!value->getName().data()[0]) continue;
