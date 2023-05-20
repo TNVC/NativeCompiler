@@ -11,12 +11,12 @@ namespace db::native
 
   const size_t PROGRAM_HEADERS_OFFSET = sizeof(Elf64_Ehdr);
   const size_t SECTION_HEADERS_OFFSET = 0;
-  const size_t PROGRAM_HEADERS_COUNT = 3;
+  const size_t PROGRAM_HEADERS_COUNT = 4;
   const size_t SECTION_HEADERS_COUNT = 0;
   const size_t SHSTRTAB_INDEX = 0;
   const int64_t NO_FLAGS = 0;
 
-  enum ProgramHeadersIndex { _text, _rodata, _data };
+  enum ProgramHeadersIndex { _text, _lib, _rodata, _data };
 
   void GenerateElf(const X86Code *code, const char *filePath)
   {
@@ -65,10 +65,16 @@ namespace db::native
 
     Elf64_Off  offset  { 0x00 };
     Elf64_Addr address { ENTRY0_ADDRESS };
-    Elf64_Xword size { code->text.size + sizeof(elf) };
+    Elf64_Xword size { code->flashing.libOffset + sizeof(elf) };
     Elf64_Xword align { 0x1000 };
     elf.programHeaders[_text] =
         { PT_LOAD, PF_R | PF_X, offset, address, address, size, size, align };
+
+    offset += size;
+    address += size;
+    size = code->flashing.libSize;
+    elf.programHeaders[_lib] =
+        { PT_LOAD, PF_R | PF_W | PF_X, offset, address, address, size, size, align };
 
     offset += size;
     address += size + align;

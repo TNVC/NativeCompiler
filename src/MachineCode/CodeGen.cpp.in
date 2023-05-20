@@ -115,8 +115,7 @@ static bool AddCallLabel(GlobalContext *context, const char *name, size_t positi
 static bool AddCallReference(GlobalContext *context, size_t pos, size_t refPos, size_t delta, const char *label);
 static bool UpdateCallReferences(GlobalContext *context, X86Code *code);
 
-static void GenerateVariableTable(Context *context, const llvm::BasicBlock *block, size_t blockIndex);
-static bool AddVariable(Context *context, const char *name, size_t blockIndex);
+static void GenerateVariableTables(Context *context, const llvm::Function *function);
 
 static location_t GetVariableLocation(Context *context, const char *name, size_t blockIndex);
 static size_t     GetVariableOffset  (Context *context, const char *name, size_t blockIndex);

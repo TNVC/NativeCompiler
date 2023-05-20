@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <cctype>
 
 namespace db
 {
@@ -106,6 +107,8 @@ namespace db
   {
     assert(context && code);
 
+    context->flashing.libOffset = code->text.size;
+
     #define WRITE_FUNCTION(NAME)                       \
       do {                                             \
         AddCallLabel(context, #NAME, code->text.size); \
@@ -124,11 +127,15 @@ namespace db
     AddCallLabel(context, "printString", code->text.size);
     unsigned char printString[] = { PRINT_STRING_DATA };
     Write(code, printString, sizeof(printString));
-    WRITE_FUNCTION(printDouble);
-    WRITE_FUNCTION( scanDouble);
-    unsigned char printDouble[] = {};
-    unsigned char  scanDouble[] = {};
+    AddCallLabel(context, "printDouble", code->text.size);
+    unsigned char printDouble[] = { PRINT_DOUBLE_DATA };
+    Write(code, printDouble, sizeof(printDouble));
+    AddCallLabel(context, "scanDouble", code->text.size);
+    unsigned char scanDouble[] = { SCAN_DOUBLE_DATA };
+    Write(code, scanDouble, sizeof(scanDouble));
 
+    context->flashing.libSize =
+        code->text.size - context->flashing.libOffset;
     return true;
   }
 
@@ -177,34 +184,18 @@ namespace db
   {
     assert(context && code && function);
 
-    size_t localsSize = 0;
-    for (size_t i = 0; i < context->blocksCount; ++i)
-      for (size_t j = 0; j < context->varTables[i].size; ++j)
-        if (context->varTables[i].data[j].location == mem) localsSize += sizeof(double);
-
     unsigned  char data[] =
         { PUSH_RBP_DATA, MOV_RBP_RSP_DATA, SUB_RSP_IMM_DATA  };
-    WRITE_INT32(&data[7], localsSize);
+    WRITE_INT32(&data[7], context->varsCount*sizeof(double));
     Write(code, data, sizeof(data));
-
-    context->varsCount = localsSize/sizeof(double);
 
     size_t size = function->arg_size();
     for (size_t i = 0; i < size; ++i)
       {
-        const char *name =
-            function->getArg(i)->getName().data();
-        location_t location{};
-        if (!SearchVariable(context, name, &location)) continue;
-
-        if (location < mem)
-          WRITE_VMOVQ_XMM_REG(location, i);
-        else
-          {
-            size_t offset = GetVariableOffset(context, name);
-            WRITE_MOV_STACK_REG(offset, i);
-          }
+        size_t offset = i*sizeof(double)+sizeof(double);
+        WRITE_MOV_STACK_REG(-offset, i);
       }
+    WRITE_PUSH_XMMS();
   }
 
   static bool GenerateGlobalVariable
@@ -328,17 +319,13 @@ namespace db
         WRITE_MOVABS_REG(R13, 0);
         context.inMain = true;
       }
-    size_t index = 0;
-    for (const llvm::BasicBlock &block : *function)
-      GenerateVariableTable(&context, &block, index++);
+
+    GenerateVariableTables(&context, function);
     GenerateProlog(&context, code, function);
 
-    index = 0;
+    size_t index = 0;
     for (const llvm::BasicBlock &block : *function)
-      {
-        AddJumpLabel(&context, block.getName().data(), code->text.size);
-        GenerateBasicBlock(&context, &block, code, index++);
-      }
+      GenerateBasicBlock(&context, &block, code, index++);
 
     UpdateJumpReferences(&context, code);
     DestroyContext(&context);
@@ -346,6 +333,27 @@ namespace db
   static void GenerateBasicBlock(Context *context, const llvm::BasicBlock *block, X86Code *code, size_t blockIndex)
     {
       assert(context && block && code);
+
+      for (size_t i = 0; i < context->varTables[blockIndex].size; ++i)
+        if (isalpha(context->varTables[blockIndex].data[i].name[0]))
+          {
+            const char *name =
+                context->varTables[blockIndex].data[i].name;
+            location_t location =
+                context->varTables[blockIndex].data[i].location;
+            size_t offset =
+                context->varTables[blockIndex].data[i].offset;
+            size_t j = 0;
+            for ( ; j < context->multiVarTable.size; ++j)
+              if (!strcmp(name, context->multiVarTable.data[j].name))
+                break;
+            WRITE_MOV_REG_STACK(RAX, -j*sizeof(double) - 8);
+            if (location < mem)
+              WRITE_VMOVQ_XMM_REG(location, RAX);
+            else
+              WRITE_MOV_STACK_REG(offset, RAX);
+          }
+      AddJumpLabel(context, block->getName().data(), code->text.size);
 
       for (const llvm::Instruction &inst : *block)
         {
@@ -365,6 +373,26 @@ namespace db
             #undef CASE
           }
         }
+
+      for (size_t i = 0; i < context->varTables[blockIndex].size; ++i)
+        if (isalpha(context->varTables[blockIndex].data[i].name[0]))
+          {
+            const char *name =
+                context->varTables[blockIndex].data[i].name;
+            location_t location =
+                context->varTables[blockIndex].data[i].location;
+            size_t offset =
+                context->varTables[blockIndex].data[i].offset;
+            size_t j = 0;
+            for ( ; j < context->multiVarTable.size; ++j)
+              if (!strcmp(name, context->multiVarTable.data[j].name))
+                break;
+            if (location < mem)
+              WRITE_VMOVQ_REG_XMM(RAX, location);
+            else
+              WRITE_MOV_REG_STACK(RAX, offset);
+            WRITE_MOV_STACK_REG(-j*sizeof(double), RAX);
+          }
     }
 
   static void PrepareArguments(Context *context, X86Code *code, llvm::Value **values, size_t size, location_t *locations, size_t blockIndex);
@@ -396,8 +424,11 @@ namespace db
   {
     assert(context && code && inst);
 
-    llvm::Value *values[2] =
-        { (llvm::Value *) inst, inst->getOperand(0) };
+    llvm::Value *values[2] = {};
+    if (llvm::isa<llvm::LoadInst>(inst))
+      { values[0] = (llvm::Value *) inst; values[1] = inst->getOperand(0); }
+    else
+      { values[0] =  inst->getOperand(0); values[1] = inst->getOperand(1); }
     location_t locations[2] = {};
     PrepareArguments(context, code, values, 2, locations, blockIndex);
 
@@ -429,7 +460,7 @@ namespace db
     const char *thenLabel = branchInst->getOperand(2)->getName().data();
     const char *elseLabel = branchInst->getOperand(1)->getName().data();
 
-    llvm::Value *value = (llvm::Value *) branchInst;
+    llvm::Value *value = branchInst->getOperand(0);
     if (value && llvm::isa<llvm::ConstantFP>(value))
       WRITE_MOVABS_REG(RAX, ((llvm::ConstantFP *) value)->getValue().convertToDouble());
     else if (value && llvm::isa<llvm::GlobalVariable>(value))
@@ -467,6 +498,7 @@ namespace db
         else WRITE_MOV_REG_STACK(RAX, GetVariableOffset(context, value->getName().data(), blockIndex));
       }
 
+    WRITE_POP_XMMS();
     unsigned char stackData[] = { ADD_RSP_IMM_DATA, POP_RBP_DATA };
     WRITE_INT32(&stackData[3], context->varsCount*sizeof(double));
     Write(code, stackData, sizeof(stackData));
@@ -519,9 +551,7 @@ namespace db
       }
 
     CleanupArguments(context, code, args, size, locations, blockIndex);
-
     Write(code, _data, sizeof(_data));
-
     return true;
   }
 
@@ -554,136 +584,181 @@ namespace db
     return true;
   }
 
-  static void GenerateVariableTable
-    (Context *context, const llvm::BasicBlock *block, size_t blockIndex)
+  typedef bool PushFunction(Context *context, const char *name, size_t blockIndex);
+  static PushFunction PushRealVariable;
+  static PushFunction     PushVariable;
+  static bool CalculateVarLocations(Context *context, size_t blockIndex);
+  static bool ParseInstruction(Context *context,
+                               PushFunction *pushFunction,
+                               const llvm::Instruction *inst,
+                               int (*checkName)(int ch),
+                               size_t blockIndex);
+
+  static bool ParseInstruction(Context *context,
+                               PushFunction *pushFunction,
+                               const llvm::Instruction *inst,
+                               int (*checkName)(int ch),
+                               size_t blockIndex)
   {
-    assert(context && block);
+    assert(pushFunction && inst && checkName);
 
-    for (const llvm::Instruction &inst : *block)
-      switch (inst.getOpcode())
+    switch (inst->getOpcode())
+    {
+      #define CASE(OP_CODE) case llvm::Instruction::OP_CODE
+
+      CASE(FAdd): CASE(FSub): CASE(FMul): CASE(FDiv): CASE(And): CASE(Or): CASE(FCmp):
+      CASE(Load): CASE(Store):
+      CASE(Alloca):
+        {
+          size_t count = inst->getNumOperands();
+
+          llvm::Value *operand0 = (llvm::Value *) inst;
+          if (operand0 &&
+              !llvm::isa<llvm::GlobalVariable>(operand0) &&
+              !llvm::isa<llvm::ConstantFP>    (operand0) &&
+                  checkName(operand0->getName().data()[0]))
+            pushFunction(context, operand0->getName().data(), blockIndex);
+
+          llvm::Value *operand1 = inst->getOperand(0);
+          if (operand1 &&
+              !llvm::isa<llvm::GlobalVariable>(operand1) &&
+              !llvm::isa<llvm::ConstantFP>    (operand1) &&
+              checkName(operand0->getName().data()[0]))
+            pushFunction(context, operand1->getName().data(), blockIndex);
+
+          llvm::Value *operand2 = count > 1 ? inst->getOperand(1) : nullptr;
+          if (operand2 &&
+              !llvm::isa<llvm::GlobalVariable>(operand2) &&
+              !llvm::isa<llvm::ConstantFP>    (operand2) &&
+              checkName(operand0->getName().data()[0]))
+            pushFunction(context, operand2->getName().data(), blockIndex);
+          break;
+        }
+      CASE(Call):
+        {
+          llvm::CallInst *callInst = (llvm::CallInst *) inst;
+          if (!callInst->getType()->isVoidTy())
+            {
+              llvm::Value *operand = (llvm::Value *) inst;
+              pushFunction(context, operand->getName().data(), blockIndex);
+            }
+
+          size_t size = callInst->getNumOperands();
+          for (size_t index = 0; index < size; ++index)
+            {
+              llvm::Value *operand = inst->getOperand(index++);
+              if (!llvm::isa<llvm::GlobalVariable>(operand) &&
+                  !llvm::isa<llvm::ConstantFP>    (operand))
+                pushFunction(context, operand->getName().data(), blockIndex);
+            }
+          break;
+        }
+      CASE(Br): CASE(Ret): default: break;
+
+      #undef CASE
+    }
+
+    return true;
+  }
+
+  static bool PushRealVariable(Context *context, const char *name, size_t blockIndex)
+  {
+    assert(context && name);
+
+    MultiBlocksVariableTable *table = &context->multiVarTable;
+    for (size_t i = 0; i < table->size; ++i)
+      if (!strcmp(name, table->data[i].name)) return true;
+
+    if (table->size == table->capacity)
       {
-        #define CASE(OP_CODE) case llvm::Instruction::OP_CODE
-
-        CASE(FAdd): CASE(FSub): CASE(FMul): CASE(FDiv): CASE(And): CASE(Or): CASE(FCmp):
-        CASE(Load): CASE(Store):
-        CASE(Alloca):
-          {
-            size_t count = inst.getNumOperands();
-
-            llvm::Value *operand0 = (llvm::Value *) &inst;
-            if (operand0 &&
-                !llvm::isa<llvm::GlobalVariable>(operand0) &&
-                !llvm::isa<llvm::ConstantFP>    (operand0))
-              AddVariable(context, operand0->getName().data(), blockIndex);
-
-            llvm::Value *operand1 = inst.getOperand(0);
-            if (operand1 &&
-                !llvm::isa<llvm::GlobalVariable>(operand1) &&
-                !llvm::isa<llvm::ConstantFP>    (operand1))
-              AddVariable(context, operand1->getName().data(), blockIndex);
-
-            llvm::Value *operand2 = count > 1 ? inst.getOperand(1) : nullptr;
-            if (operand2 &&
-                !llvm::isa<llvm::GlobalVariable>(operand2) &&
-                !llvm::isa<llvm::ConstantFP>    (operand2))
-              AddVariable(context, operand2->getName().data(), blockIndex);
-            break;
-          }
-        CASE(Call):
-          {
-            llvm::CallInst *callInst = (llvm::CallInst *) &inst;
-            if (!callInst->getType()->isVoidTy())
-              {
-                llvm::Value *operand = (llvm::Value *) &inst;
-                AddVariable(context, operand->getName().data(), blockIndex);
-              }
-
-            size_t size = callInst->getNumOperands();
-            for (size_t index = 0; index < size; ++index)
-              {
-                llvm::Value *operand = inst.getOperand(index++);
-                if (!llvm::isa<llvm::GlobalVariable>(operand) &&
-                    !llvm::isa<llvm::ConstantFP>    (operand))
-                  AddVariable(context, operand->getName().data(), blockIndex);
-              }
-            break;
-          }
-        CASE(Br): CASE(Ret): default: break;
-
-        #undef CASE
+        size_t capacity = 2*table->capacity+1;
+        MultiBlocksVariable *temp =
+            (MultiBlocksVariable *) realloc(table->data, capacity*sizeof(MultiBlocksVariable));
+        if (!temp) OUT_OF_MEMORY(return false);
+        table->data = temp;
+        table->capacity = capacity;
       }
 
-    const size_t REGS_COUNT = 16;
-    size_t size = context->varTables[blockIndex].size;
-    size = size < REGS_COUNT ? size : REGS_COUNT;
-    size_t i = 0;
-    for ( ; i < size; ++i)
-      context->varTables[blockIndex].data[i].location = (location_t) i;
-
-    size =  context->varTables[blockIndex].size;
-    for ( ; i < size; ++i)
-      {
-        context->varTables[blockIndex].data[i].location = mem;
-        context->varTables[blockIndex].data[i].offset = -8*(i + 1);
-      }
-  }//TODO
-  static bool AddVariable(Context *context, const char *name, size_t blockIndex)
+    table->data[table->size++] = { name };
+    return true;
+  }
+  static bool PushVariable(Context *context, const char *name, size_t blockIndex)
   {
     assert(context && name);
 
     BlockVariableTable *table = &context->varTables[blockIndex];
-    bool isNew = true;
     for (size_t i = 0; i < table->size; ++i)
       if (!strcmp(name, table->data[i].name))
-        {
-          ++table->data[i].usageCount;
-          isNew = false;
-          break;
-        }
+        { ++table->data[i].usageCount; return true; }
 
-    if (isNew && table->size == table->capacity)
+    if (table->size == table->capacity)
       {
-        size_t capacity = 2*table->capacity + 1;
+        size_t capacity = 2*table->capacity+1;
         BlockVariable *temp =
             (BlockVariable *) realloc(table->data, capacity*sizeof(BlockVariable));
         if (!temp) OUT_OF_MEMORY(return false);
-        table->capacity = capacity;
         table->data = temp;
+        table->capacity = capacity;
       }
-    if (isNew)
-      table->data[table->size++] = { name, 1 };
 
-    for (size_t i = 0; i < context->multiVarTable.size; ++i)
-      if (!strcmp(name, context->multiVarTable.data[i].name))
+    table->data[table->size++] = { name, 1 };
+    return true;
+  }
+
+  static bool CalculateVarLocations(Context *context, size_t blockIndex)
+  {
+    assert(context);
+
+    size_t offset = sizeof(double)*context->multiVarTable.size;
+    BlockVariableTable *table = &context->varTables[blockIndex];
+    for (size_t i = 0; i < table->size; ++i)
       {
-        context->multiVarTable.data[i].useVar[blockIndex] = true;
-        return true;
+        table->data[i].location =
+            i < xmm15 ? (location_t) i : mem;
+        if (i < xmm15) continue;
+
+        offset += sizeof(double);
+        table->data[i].offset = offset;
       }
-
-    for (size_t i = 0; i < blockIndex; ++i)
-      for (size_t j = 0; j < context->varTables[i].size; ++j)
-        if (!strcmp(name, context->varTables[i].data[j].name))
-          {
-            if (context->multiVarTable.size == context->multiVarTable.capacity)
-              {
-                size_t capacity = 2*context->multiVarTable.capacity + 1;
-                MultiBlocksVariable *temp =
-                  (MultiBlocksVariable *) realloc(context->multiVarTable.data, capacity*sizeof(MultiBlocksVariable));
-                if (!temp) OUT_OF_MEMORY(return false);
-                context->multiVarTable.data = temp;
-                context->multiVarTable.capacity = capacity;
-              }
-
-            size_t index = context->multiVarTable.size++;
-            context->multiVarTable.data[index] = { name };
-            bool *temp = (bool *) calloc(context->blocksCount, sizeof(bool));
-            if (!temp) OUT_OF_MEMORY(return false);
-            context->multiVarTable.data[index].useVar = temp;
-
-            return true;
-          }
 
     return true;
+  }
+
+  static void GenerateVariableTables
+    (Context *context, const llvm::Function *function)
+  {
+    assert(context && function);
+
+    for (size_t i = 0; i < function->arg_size(); ++i)
+      PushRealVariable(context, function->getArg(i)->getName().data(), 0);
+
+    size_t index = 0;
+    for (const llvm::BasicBlock &block : *function)
+      {
+        for (const llvm::Instruction &inst : block)
+          {
+            ParseInstruction(context, PushRealVariable, &inst, isalpha, 0);
+            ParseInstruction(context, PushVariable    , &inst, isalnum, index);
+          }
+          ++index;
+      }
+
+    for (size_t i = 0; i < context->blocksCount; ++i)
+      CalculateVarLocations(context, i);
+
+    size_t maxMemoryVarCount = 0;
+    for (size_t i = 0; i < context->blocksCount; ++i)
+      {
+        size_t memoryVarCount = 0;
+        for (size_t j = 0; j < context->varTables[i].size; ++j)
+          if (context->varTables[i].data[j].location == mem) ++memoryVarCount;
+
+        if (maxMemoryVarCount > memoryVarCount)
+          maxMemoryVarCount = memoryVarCount;
+      }
+
+    context->varsCount =
+        context->multiVarTable.size + maxMemoryVarCount;
   }
 
   static bool AddJumpLabel(Context *context, const char *name, size_t position)
@@ -820,6 +895,7 @@ namespace db
     for (size_t i = 0; i < size; ++i)
       if (!llvm::isa<llvm::ConstantFP>(values[i]) && !llvm::isa<llvm::GlobalVariable>(values[i]))
         {
+          if (!values[i]->getName().data()[0]) continue;
           location_t location =
               GetVariableLocation(context, values[i]->getName().data(), blockIndex);
           if (location != mem) isRegisterUsing[1][location] = true;
@@ -842,6 +918,9 @@ namespace db
         for ( ; regIndex[1] < REG_COUNT; ++regIndex[1]) if (!isRegisterUsing[1][regIndex[1]]) break;
 
         llvm::Value *value = values[i];
+        if (!llvm::isa<llvm::GlobalVariable>(value) &&
+            !llvm::isa<llvm::ConstantFP>(value) &&
+            !value->getName().data()[0]) continue;
 
         if (llvm::isa<llvm::GlobalVariable>(value))
           {
@@ -868,7 +947,7 @@ namespace db
           {
             location_t location =
                 GetVariableLocation(context, value->getName().data(), blockIndex);
-            if (location != mem) locations[0] = location;
+            if (location != mem) locations[i] = location;
             else
               EMIT_XMM(
                   size_t offset =
@@ -891,6 +970,8 @@ namespace db
     for (size_t i = 0; i < size; ++i)
       if (!llvm::isa<llvm::ConstantFP>(values[i]) && !llvm::isa<llvm::GlobalVariable>(values[i]))
         {
+          if (!values[i]->getName().data()[0]) continue;
+
           location_t location =
               GetVariableLocation(context, values[i]->getName().data(), blockIndex);
           if (location != mem) isRegisterUsing[1][location] = true;
@@ -912,6 +993,7 @@ namespace db
         for ( ; regIndex[1] < REG_COUNT; ++regIndex[1]) if (!isRegisterUsing[1][regIndex[1]]) break;
 
         llvm::Value *value = values[i];
+        if (!value->getName().data()[0]) continue;
 
         if (llvm::isa<llvm::GlobalVariable>(value))
           EMIT_XMM(

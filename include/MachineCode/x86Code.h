@@ -14,6 +14,8 @@ namespace db
     size_t rodata;
     size_t   data;
     size_t mainAddress;
+    size_t libOffset;
+    size_t libSize;
   };
 
   struct Area {

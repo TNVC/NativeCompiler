@@ -707,7 +707,6 @@ namespace db
         {
           llvm::Value *value =
               theModule->builder->CreateLoad(type, initValue, name);
-          SetName(value);
           return value;
         }
       else
