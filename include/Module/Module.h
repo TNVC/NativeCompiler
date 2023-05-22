@@ -5,8 +5,7 @@
 
 #include "ClangAPI.h"
 
-namespace db
-{
+namespace db {
 
   struct Module {
       llvm::LLVMContext *context;
@@ -16,7 +15,7 @@ namespace db
       SymbolTable symTable;
     };
 
-  Module *GenerateModuleFromAST(AST *ast);
+  Module *GenerateModule(AST *ast);
   void DestroyModule(Module *theModule);
 
 }

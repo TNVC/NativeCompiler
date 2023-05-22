@@ -1,0 +1,25 @@
+#pragma once
+
+#define sin_FUNCTION               \
+  0x31, 0xC0, /*xor eax, eax*/     \
+  0xC3        /*ret*/
+
+#define cos_FUNCTION               \
+  0x31, 0xC0, /*xor eax, eax*/     \
+  0xC3        /*ret*/
+
+#define tan_FUNCTION               \
+  0x31, 0xC0, /*xor eax, eax*/     \
+  0xC3        /*ret*/
+
+#define pow_FUNCTION               \
+  0x31, 0xC0, /*xor eax, eax*/     \
+  0xC3        /*ret*/
+
+#define sqrt_FUNCTION              \
+  0x31, 0xC0, /*xor eax, eax*/     \
+  0xC3        /*ret*/
+
+#define printString_FUNCTION
+#define printDouble_FUNCTION
+#define scanDouble_FUNCTION

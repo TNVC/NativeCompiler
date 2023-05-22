@@ -94,7 +94,7 @@ namespace db
 
   static void *VisitASTNode(Module *theModule, Status *status, ASTNode *node);
 
-  Module *GenerateModuleFromAST(AST *ast)
+  Module *GenerateModule(AST *ast)
     {
       assert(ast);
 

@@ -1,0 +1,109 @@
+#pragma once
+
+#define XMM_TO_VVVV(XMM) (byte(15 - (XMM)))
+#define XMM_TO_ARG(XMM) (byte((XMM) - 8*((XMM) >= xmm8)))
+#define REG_TO_ARG(REG) (byte((REG) - 8*((REG) >= r8  )))
+
+enum class VEX { C5 = 0, C4 = 1 };
+
+const byte VEX_VALUES[] = { /*C5*/ 0xC5, /*C4*/ 0xC4 };
+const size_t VEX_SIZES[] = { /*C5*/ 2, /*C4*/ 3 };
+
+const byte X86CMD_L = false;
+const byte X86CMD_X = true;
+const byte X86CMD_W = false;
+const byte X86CMD_MAP_SELECT = 1;
+
+const byte REG_REG_MOD = 3;
+
+struct x86cmd5byte {
+  byte prefix;
+  struct {
+    byte mapSelect : 5;
+    byte B         : 1;
+    byte X         : 1;
+    byte R         : 1;
+  };
+  struct {
+    byte pp   : 2;
+    byte L    : 1;
+    byte vvvv : 4;
+    byte W    : 1;
+  };
+  byte opcode;
+  struct {
+    byte secondArg : 3;
+    byte  firstArg : 3;
+    byte mode      : 2;
+  };
+};
+
+struct x86cmd4byte {
+  byte prefix;
+  struct {
+    byte pp   : 2;
+    byte L    : 1;
+    byte vvvv : 4;
+    byte R    : 1;
+  };
+  byte opcode;
+  struct {
+    byte secondArg : 3;
+    byte  firstArg : 3;
+    byte mode      : 2;
+  };
+};
+
+enum ArithmeticOpcodesIndex {
+  vaddsd = 0, vmulsd = 1, vsubsd = 2, vdivsd = 3, vandsd  = 4, vorsd  = 5,
+};
+
+const byte ARITHMETIC_OPCODES_EXTENSIONS[] =
+    {
+      /*VADDSD*/ 0x03, /*VMULSD*/ 0x03, /*VSUBSD*/ 0x03,
+      /*VDIVSD*/ 0x03, /*VANDPD*/ 0x01, /*VORPD */ 0x01,
+    };
+const byte ARITHMETIC_OPCODES[] =
+    {
+      /*VADDSD*/ 0x58, /*VMULSD*/ 0x59, /*VSUBSD*/ 0x5C,
+      /*VDIVSD*/ 0x5E, /*VANDPD*/ 0x54, /*VORPD */ 0x56,
+    };
+
+const byte VMOVQ_OPCODE = 0x7E;
+const byte VMOVQ_XMM_REG_OPCODE = 0x6E;
+const byte VMOVQ_REG_XMM_OPCODES_EXTENSIONS = 1;
+const byte VMOVQ_VVVV = 0xF;
+const byte VMOVQ_XMM_XMM_OPCODES_EXTENSIONS = 2;
+const byte VMOVQ_XMM_REG_OPCODES_EXTENSIONS = 1;
+const byte VMOVQ_XMM_XMM_B = false;
+const byte VMOVQ_REG_XMM_W = true;
+
+enum CompareTypeIndex { eq = 0, ne = 1, gt = 2, lt = 3 };
+const byte COMPARE_ARGUMENTS[] = { /*eq*/ 0x0, /*ne*/ 0x4, /*gt*/ 0xE, /*lt*/ 0x1 };
+
+const byte VCMPSD_OPCODES_EXTENSIONS = 3;
+const byte VCMPSD_OPCODE = 0xC2;
+const byte VCMPSD_B = true;
+
+const byte RET[] = { 0xC3 /* ret */ };
+const byte MAIN_RET[] =
+    {
+      0x31, 0xFF,                   // xor edi, edi
+      0xB8, 0x3C, 0x00, 0x00, 0x00, // mov eax, 0x3C
+      0x0F, 0x05,                   // syscall
+    };
+const byte JMP[] = { 0xE9, 0x00, 0x00, 0x00, 0x00 /*jmp 0*/};
+const size_t JMP_ADDRESS_OFFSET = 1;
+
+const byte JNE[] = { 0x0F, 0x85, 0x00, 0x00, 0x00, 0x00 /*jne 0*/ };
+const size_t JNE_ADDRESS_OFFSET = 2;
+const byte CMP_EAX_EAX[] = { 0x85, 0xC0 /*test eax, eax*/ };
+
+const byte MOVABS_R15[] =
+    { 0x49, 0xBF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /*movabs r15, 0*/ };
+const byte MOVABS_R14[] =
+    { 0x49, 0xBE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /*movabs r14, 0*/ };
+const size_t MOVABS_OFFSET = 2;
+
+const byte CALL[] = { 0xE8, 0x00, 0x00, 0x00, 0x00 /*call 0*/ };
+const size_t CALL_OFFSET = 1;

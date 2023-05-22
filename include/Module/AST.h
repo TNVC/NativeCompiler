@@ -2,8 +2,7 @@
 
 #include <cstddef>
 
-namespace db
-{
+namespace db {
 
   enum ASTStatement {
     St   , If  , Else, Var ,

@@ -1,0 +1,338 @@
+#include "StdLibrary.def"
+
+enum Location {
+  rax =  0, rcx =  1, rdx =  2, rbx =  3,
+  rsp =  4, rbp =  5, rsi =  6, rdi =  7,
+  r8  =  8, r9  =  9, r10 = 10, r11 = 11,
+  r12 = 12, r13 = 13, r14 = 14, r15 = 15,
+  xmm0  =  0, xmm1  =  1, xmm2  =  2, xmm3  =  3,
+  xmm4  =  4, xmm5  =  5, xmm6  =  6, xmm7  =  7,
+  xmm8  =  8, xmm9  =  9, xmm10 = 10, xmm11 = 11,
+  xmm12 = 12, xmm13 = 13, xmm14 = 14, xmm15 = 15,
+  mem   = 16
+};
+
+#define TABLE_STRUCT(TYPE)       \
+  struct TYPE ## Table {         \
+    size_t size;                 \
+    size_t capacity;             \
+    TYPE *data;                  \
+  }
+
+const size_t GROWTH_FACTOR = 2;
+const size_t GROWTH_OFFSET = 1;
+
+struct GlobalVariable {
+  const char *name;
+  size_t position;
+  size_t size;
+};
+
+TABLE_STRUCT(GlobalVariable);
+
+struct BlockVariable {
+  const char *name;
+  Location location;
+  size_t offset;
+};
+
+TABLE_STRUCT(BlockVariable);
+
+struct Reference {
+  size_t cmdPosition;
+  size_t referencePosition;
+  size_t cmdSize;
+  const char *refereeName;
+};
+
+TABLE_STRUCT(Reference);
+
+struct Label {
+  const char *name;
+  size_t position;
+};
+
+TABLE_STRUCT(Label);
+
+struct GlobalContext {
+  GlobalVariableTable doubles;
+  GlobalVariableTable strings;
+  ReferenceTable callRefTable;
+  LabelTable     callLabelTable;
+  struct {
+    size_t writingRodataOffset;
+    size_t writingDataOffset;
+  } references;
+};
+
+struct Status {
+  bool inMain;
+};
+
+struct Context {
+  ReferenceTable jumpRefTable;
+  LabelTable     jumpLabelTable;
+  size_t blocksCount;
+  BlockVariableTable *varTables;
+  GlobalContext *globalContext;
+  Status status;
+};
+
+#undef TABLE_STRUCT
+
+static bool GetValues    (Context *context, const llvm::Value *values[], Location *locations, size_t size, x86Code *code);
+static bool CleanupValues(Context *context, const llvm::Value *values[], size_t size, x86Code *code);
+
+static bool PushUsingRegisters(Context *context, const llvm::Function *function, x86Code *code);
+static bool  PopUsingRegisters(Context *context, x86Code *code);
+
+static bool PushCallLabel(GlobalContext *context, Label *label);
+static bool PushJumpLabel(      Context *context, Label *label);
+static bool PushCallReference(GlobalContext *context, Reference *reference);
+static bool PushJumpReference(      Context *context, Reference *reference);
+static bool UpdateCallReferences(GlobalContext *context, x86Code *code);
+static bool UpdateJumpReferences(      Context *context, x86Code *code);
+
+static bool CreateGlobalContext
+    (GlobalContext *context, const Module *theModule, x86Code *code);
+static void DestroyGlobalContext(GlobalContext *context);
+
+static bool CreateContext(Context *context, const llvm::Function *function);
+static void DestroyContext(Context *context);
+
+static bool CreateVariableTable(Context *context, const llvm::BasicBlock *block, size_t blockIndex);
+
+static bool EmitGlobals
+    (GlobalContext *context, const Module *theModule, x86Code *code);
+static bool EmitStdLibrary(GlobalContext *context, x86Code *code);
+
+static bool CreateGlobalContext
+    (GlobalContext *context, const Module *theModule, x86Code *code)
+  {
+    assert(context && theModule && code);
+
+    *context = {};
+    return EmitGlobals(context, theModule, code);
+  }
+
+static void DestroyGlobalContext(GlobalContext *context)
+  {
+    assert(context);
+
+    free(context->doubles.data);
+    free(context->strings.data);
+    free(context->callRefTable  .data);
+    free(context->callLabelTable.data);
+
+    *context = {};
+  }
+
+static bool EmitGlobals
+    (GlobalContext *context, const Module *theModule, x86Code *code)
+  {
+    assert(context && theModule && code);
+
+    struct Section {
+      size_t size;
+      size_t entityCount;
+    };
+
+    Section doubles{};
+    Section strings{};
+    for (const auto &global : theModule->theModule->globals())
+      {
+        llvm::Type *type =
+            global.getValueType();
+        if (type->getTypeID() == llvm::Type::DoubleTyID)
+          { doubles.size +=              sizeof(double); ++doubles.entityCount; }
+        else
+          { strings.size += type->getArrayNumElements(); ++strings.entityCount; }
+      }
+
+    code->data.data =
+        doubles.entityCount ?
+          (byte *) calloc(doubles.entityCount, sizeof(double)) : nullptr;
+    if (doubles.entityCount && !code->data  .data)
+      OUT_OF_MEMORY(return false);
+    code->data  .size = code->data  .capacity = doubles.size;
+    code->rodata.data =
+        strings.entityCount ?
+          (byte *) calloc(strings.size       , sizeof(char  )) : nullptr;
+    if (strings.entityCount && !code->rodata.data)
+      OUT_OF_MEMORY(free(code->data.data); return false);
+    code->rodata.size = code->rodata.capacity = strings.size;
+
+    context->doubles.data =
+        (GlobalVariable *) calloc(doubles.entityCount, sizeof(GlobalVariable));
+    if (doubles.entityCount && !context->doubles.data)
+      OUT_OF_MEMORY(FreeAll(code->data.data, code->rodata.data); return false);
+    context->doubles.size = context->doubles.capacity = doubles.size;
+    context->strings.data =
+        (GlobalVariable *) calloc(strings.entityCount, sizeof(GlobalVariable));
+    if (strings.entityCount && !context->strings.data)
+      OUT_OF_MEMORY(FreeAll(code->data.data, code->rodata.data, context->doubles.data); return false);
+    context->strings.size = context->strings.capacity = strings.size;
+
+    struct {
+      size_t doubles;
+      size_t strings;
+    } index{};
+    for (const auto &global : theModule->theModule->globals())
+      {
+        llvm::Type *type =
+            global.getValueType();
+        if (type->getTypeID() == llvm::Type::DoubleTyID)
+          {
+            double value =
+                ((llvm::ConstantFP *) global.getInitializer())->getValue().convertToDouble();
+
+            context->doubles.data[index.doubles] =
+                { global.getName().data(), index.doubles*sizeof(double), sizeof(double) };
+            WRITE_INT64(&code->data.data[index.doubles++*sizeof(double)], value);
+          }
+        else
+          {
+            const char *value =
+                ((llvm::ConstantDataArray *) global.getInitializer())->getRawDataValues().data();
+            size_t valueSize =
+                type->getArrayNumElements();
+
+            context->strings.data[index.strings] =
+                { global.getName().data(), index.strings, valueSize };
+            memcpy(code->rodata.data + index.strings, value, valueSize);
+            index.strings += valueSize;
+          }
+      }
+
+    return true;
+  }
+
+static bool EmitStdLibrary(GlobalContext *context, x86Code *code)
+  {
+    assert(context && code);
+
+    #define CREATE_STD_FUNCTION(NAME)                       \
+      do {                                                  \
+        Label label{ #NAME, code->text.size };              \
+        PushCallLabel(context, &label);                     \
+        byte NAME ## _DATA[] = { NAME  ## _FUNCTION };      \
+        Write(code, NAME ## _DATA, sizeof(NAME ## _DATA));  \
+      } while (false)
+
+
+    code->stdlib.offset = code->text.size;
+    CREATE_STD_FUNCTION(sin);
+    CREATE_STD_FUNCTION(cos);
+    CREATE_STD_FUNCTION(tan);
+    CREATE_STD_FUNCTION(pow);
+    CREATE_STD_FUNCTION(sqrt);
+    CREATE_STD_FUNCTION(printString);
+    CREATE_STD_FUNCTION(printDouble);
+    CREATE_STD_FUNCTION(scanDouble);
+    code->stdlib.size =
+        code->text.size - code->stdlib.offset;
+
+    #undef CREATE_STD_FUNCTION
+
+    return true;
+  }
+
+static bool CreateContext(Context *context, const llvm::Function *function)
+  {
+    assert(context && function);
+
+    *context = {};
+    context->blocksCount = function->size();
+    context->varTables =
+        (BlockVariableTable *) calloc(context->blocksCount, sizeof(BlockVariableTable));
+    if (!context->varTables) OUT_OF_MEMORY(return false);
+
+    size_t blockIndex = 0;
+    for (const llvm::BasicBlock &block : *function)
+      CreateVariableTable(context, &block, blockIndex++);
+
+    return true;
+  }
+
+static void DestroyContext(Context *context)
+  {
+    assert(context);
+
+    for (size_t i = 0; i < context->blocksCount; ++i) free(context->varTables[i].data);
+    FreeAll(context->varTables, context->jumpLabelTable.data, context->jumpRefTable.data);
+    *context = {};
+  }
+
+#define PUSHER(TYPE, TABLE, NAME)                                                                 \
+  do {                                                                                            \
+    assert(context && value);                                                                     \
+                                                                                                  \
+    if (context->NAME ## TABLE ## Table.size == context->NAME ## TABLE ## Table.capacity)         \
+      {                                                                                           \
+        size_t newCapacity =                                                                      \
+            GROWTH_FACTOR*context->NAME ## TABLE ## Table.capacity + GROWTH_OFFSET;               \
+        TYPE *temp =                                                                              \
+            (TYPE *) realloc(context->NAME ## TABLE ## Table.data, newCapacity*sizeof(TYPE));     \
+        if (!temp) OUT_OF_MEMORY(return false);                                                   \
+                                                                                                  \
+        context->NAME ## TABLE ## Table.data = temp;                                              \
+        context->NAME ## TABLE ## Table.capacity = newCapacity;                                   \
+      }                                                                                           \
+                                                                                                  \
+    context->NAME ## TABLE ## Table.data[context->NAME ## TABLE ## Table.size++] =                \
+        *value;                                                                                   \
+    return true;                                                                                  \
+  } while (false)
+
+static bool PushCallLabel(GlobalContext *context, Label *value)
+  { PUSHER(Label    , Label, call); }
+
+static bool PushJumpLabel(Context *context, Label *value)
+  { PUSHER(Label    , Label, jump); }
+
+static bool PushCallReference(GlobalContext *context, Reference *value)
+  { PUSHER(Reference, Ref  , call); }
+
+static bool PushJumpReference(Context *context, Reference *value)
+  { PUSHER(Reference, Ref  , jump); }
+
+#undef PUSHER
+
+#define UPDATER(NAME)                                                             \
+  do {                                                                            \
+    assert(context && code);                                                      \
+                                                                                  \
+    for (size_t i = 0; i < context->NAME ## LabelTable.size; ++i)                 \
+      {                                                                           \
+        const char *name =                                                        \
+            context->NAME ## LabelTable.data[i].name;                             \
+        for (size_t j = 0; j < context->NAME ## RefTable.size; ++j)               \
+          if (!strcmp(name, context->NAME ## RefTable.data[j].refereeName))       \
+            {                                                                     \
+              size_t relativeAddress =                                            \
+                  context->NAME ## LabelTable.data[i].position  -                 \
+                  context->NAME ## RefTable.data[j].cmdPosition -                 \
+                  context->NAME ## RefTable.data[j].cmdSize;                      \
+              size_t position =                                                   \
+                  context->NAME ## RefTable.data[j].referencePosition;            \
+              WRITE_INT32(&code->text.data[position], relativeAddress);           \
+            }                                                                     \
+      }                                                                           \
+                                                                                  \
+    return true;                                                                  \
+  } while (false)
+
+static bool UpdateCallReferences(GlobalContext *context, x86Code *code)
+  { UPDATER(call); }
+
+static bool UpdateJumpReferences(Context *context, x86Code *code)
+  { UPDATER(jump); }
+
+#undef UPDATER
+
+static bool Write(x86Code *code, const void *buffer, size_t size)
+  {
+    assert(code && buffer);
+    memcpy(&code->text.data[code->text.size], buffer, size);
+    return true;
+  }
